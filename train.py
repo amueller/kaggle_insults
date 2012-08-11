@@ -71,8 +71,6 @@ def get_features(comments, vectorizers=None):
     # get the google bad word list
     with open("google_badlist.txt") as f:
         badwords = [l.strip() for l in f.readlines()]
-        badword_doc = " ".join(badwords)
-    comments.append(badword_doc)
 
     print("vecorizing")
     if vectorizers is None:
@@ -89,11 +87,6 @@ def get_features(comments, vectorizers=None):
     counts = counts.tocsr()
     counts_char = counts_char.tocsr()
 
-    badword_counts = counts[-1, :]
-    counts = counts[:-1, :]
-    counts_char = counts_char[:-1, :]
-    comments.pop(-1)
-
     ## some handcrafted features!
     n_words = [len(c.split()) for c in comments]
     n_chars = [len(c) for c in comments]
@@ -105,10 +98,10 @@ def get_features(comments, vectorizers=None):
     # average word length
     mean_word_len = [np.mean([len(w) for w in c.split()]) for c in comments]
     # number of google badwords:
-    n_bad = counts * badword_counts.T
+    n_bad = [np.sum([w in c.lower() for w in badwords]) for c in comments]
 
     features = np.array([n_words, n_chars, allcaps, max_word_len,
-        mean_word_len, n_bad.toarray()]).T
+        mean_word_len, n_bad]).T
 
     features = sparse.hstack([counts, counts_char, features])
     if vectorizers is None:
