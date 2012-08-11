@@ -6,8 +6,8 @@ from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
 #from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
-#from scipy import sparse
+#from sklearn.pipeline import Pipeline
+import scipy
 #from sklearn.ensemble import RandomForestClassifier
 from IPython.core.debugger import Tracer
 
@@ -66,10 +66,14 @@ def grid_search():
     comments, dates, labels = load_data()
 
     print("vecorizing")
-    countvect = CountVectorizer(max_n=3)
+    countvect = CountVectorizer(max_n=2)
+    countvect_char = CountVectorizer(max_n=6, analyzer="char")
     #countvect = TfidfVectorizer()
 
-    #counts = countvect.fit_transform(comments)
+    counts = countvect.fit_transform(comments)
+    counts_char = countvect_char.fit_transform(comments)
+    features = scipy.sparse.hstack([counts, counts_char])
+    tracer()
     #counts_array = counts.toarray()
     #indicators = sparse.csr_matrix((counts_array > 0).astype(np.int))
 
@@ -78,29 +82,34 @@ def grid_search():
     #inds = np.random.permutation(len(labels))
     #n_samples = len(labels)
     #print("training")
-    param_grid = dict(logr__C=2. ** np.arange(-6, 4),
-            logr__penalty=['l1', 'l2'],
-            vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
+    #param_grid = dict(logr__C=2. ** np.arange(-6, 4),
+            #logr__penalty=['l1', 'l2'],
+            #vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
+    param_grid = dict(C=2. ** np.arange(-3, 4),
+            penalty=['l1', 'l2'])
     #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
-    clf = LogisticRegression(tol=1e-8)
-    pipeline = Pipeline([('vect', countvect), ('logr', clf)])
+    clf = LogisticRegression(tol=1e-8, penalty='l1', C=2)
+    #pipeline = Pipeline([('vect', countvect), ('logr', clf)])
+    #feature_selector.fit(comments, labels)
+    #features = feature_selector.transform(comments).toarray()
 
     #clf = NearestCentroid()
 
-    #param_grid = dict(max_depth=np.arange(1, 10))
+    #param_grid = dict(max_depth=np.arange(1, 20), max_features=['sqrt', 'log2', None])
     #clf = RandomForestClassifier(n_estimators=10)
 
-    grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
+    grid = GridSearchCV(clf, cv=5, param_grid=param_grid, verbose=4,
             n_jobs=11)
     #print(cross_val_score(clf, counts, labels, cv=3))
 
-    grid.fit(comments, labels)
+    grid.fit(features, labels)
+    print(grid.best_score_)
+    print(grid.best_params_)
     #clf.fit(X_train, y_train)
     #print(clf.score(X_test, y_test))
-    comments_test, dates_test = load_test()
-    counts_test = countvect.transform(comments_test)
-    prob_pred = grid.best_estimator_.predict_proba(counts_test)
     tracer()
+    comments_test, dates_test = load_test()
+    prob_pred = grid.best_estimator_.predict_proba(comments_test)
     write_test(prob_pred[:, 1])
 
 if __name__ == "__main__":
