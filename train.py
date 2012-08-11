@@ -53,7 +53,9 @@ def load_test():
     return comments, dates
 
 
-def write_test(labels, fname="test_prediction.csv"):
+def write_test(labels, fname=None):
+    if fname is None:
+        fname = "test_prediction_%d.csv" % time()
     with open("test.csv") as f:
         with open(fname, 'w') as fw:
             fw.write(f.readline())
@@ -61,29 +63,36 @@ def write_test(labels, fname="test_prediction.csv"):
                 fw.write("%f," % label)
                 fw.write(line)
 
+#def get_fp_fn(clf, X, y, comments):
+    #n_samples = X.shape[0]
+    #inds = np.random.permutation(n_samples)
 
-def grid_search():
-    comments, dates, labels = load_data()
 
-    print("vecorizing")
-    countvect = CountVectorizer(max_n=2)
-    countvect_char = CountVectorizer(max_n=6, analyzer="char")
-    #countvect = TfidfVectorizer()
-
-    counts = countvect.fit_transform(comments)
-    counts_char = countvect_char.fit_transform(comments)
+def get_features(comments, vectorizers=None):
     # get the google bad word list
     with open("google_badlist.txt") as f:
         badwords = [l.strip() for l in f.readlines()]
         badword_doc = " ".join(badwords)
-
     comments.append(badword_doc)
 
-    #countvect = CountVectorizer(max_n=2, analyzer="char")
-    countvect = CountVectorizer(max_n=2)
-    counts = countvect.fit_transform(comments).tocsr()
+    print("vecorizing")
+    if vectorizers is None:
+        countvect = CountVectorizer(max_n=2)
+        countvect_char = CountVectorizer(max_n=6, analyzer="char")
+        #countvect = TfidfVectorizer()
+
+        counts = countvect.fit_transform(comments)
+        counts_char = countvect_char.fit_transform(comments)
+    else:
+        counts, counts_char = \
+                [cv.transform(comments) for cv in vectorizers]
+
+    counts = counts.tocsr()
+    counts_char = counts_char.tocsr()
+
     badword_counts = counts[-1, :]
     counts = counts[:-1, :]
+    counts_char = counts_char[:-1, :]
     comments.pop(-1)
 
     ## some handcrafted features!
@@ -103,11 +112,14 @@ def grid_search():
         mean_word_len, n_bad.toarray()]).T
 
     features = sparse.hstack([counts, counts_char, features])
+    if vectorizers is None:
+        return features, (countvect, countvect_char)
+    return features
 
-    ## exlamation marks
-    #excl = [comment.count("!") for comment in comments]
-    ## double exlamation marks
-    #excl2 = [comment.count("!!") for comment in comments]
+
+def grid_search():
+    comments, dates, labels = load_data()
+    features, vectorizers = get_features(comments)
 
     tracer()
     #countvect = TfidfVectorizer()
@@ -115,24 +127,17 @@ def grid_search():
     #param_grid = dict(logr__C=2. ** np.arange(-6, 4),
             #logr__penalty=['l1', 'l2'],
             #vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
-    param_grid = dict(C=2. ** np.arange(-3, 4),
-            penalty=['l1', 'l2'])
+    #param_grid = dict(C=2. ** np.arange(-3, 4),
+            #penalty=['l1', 'l2'])
+    param_grid = dict(C=2. ** np.arange(-5, 0),
+            penalty=['l2'])
     #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
     clf = LogisticRegression(tol=1e-8, penalty='l1', C=2)
     #pipeline = Pipeline([('vect', countvect), ('logr', clf)])
     #feature_selector.fit(comments, labels)
     #features = feature_selector.transform(comments).toarray()
-    param_grid = dict(C=2. ** np.arange(-6, 4),
-            penalty=['l1', 'l2'])
-            #vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
     #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
     clf = LogisticRegression(tol=1e-8)
-    #pipeline = Pipeline([('vect', countvect), ('logr', clf)])
-
-    #clf = NearestCentroid()
-
-    #param_grid = dict(max_depth=np.arange(1, 20), max_features=['sqrt', 'log2', None])
-    #clf = RandomForestClassifier(n_estimators=10)
 
     grid = GridSearchCV(clf, cv=5, param_grid=param_grid, verbose=4,
             n_jobs=11)
@@ -145,8 +150,8 @@ def grid_search():
     #print(clf.score(X_test, y_test))
     tracer()
     comments_test, dates_test = load_test()
-    counts_test = countvect.transform(comments_test)
-    prob_pred = grid.best_estimator_.predict_proba(counts_test)
+    features_test = get_features(comments_test, vectorizers)
+    prob_pred = grid.best_estimator_.predict_proba(features_test)
     write_test(prob_pred[:, 1])
 
 if __name__ == "__main__":
