@@ -76,8 +76,8 @@ def get_features(comments, vectorizers=None):
 
     print("vecorizing")
     if vectorizers is None:
-        countvect = CountVectorizer(max_n=2)
-        countvect_char = CountVectorizer(max_n=6, analyzer="char")
+        countvect = CountVectorizer(max_n=2, binary=True)
+        countvect_char = CountVectorizer(max_n=6, analyzer="char", binary=True)
         #countvect = TfidfVectorizer()
 
         counts = countvect.fit_transform(comments)
@@ -120,7 +120,6 @@ def grid_search():
     comments, dates, labels = load_data()
     features, vectorizers = get_features(comments)
 
-    tracer()
     #countvect = TfidfVectorizer()
 
     #param_grid = dict(logr__C=2. ** np.arange(-6, 4),
@@ -128,7 +127,8 @@ def grid_search():
             #vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
     #param_grid = dict(C=2. ** np.arange(-3, 4),
             #penalty=['l1', 'l2'])
-    param_grid = dict(C=2. ** np.arange(-5, 0),
+    #class_weights = [{'0':1, '1':1}, 'auto', None, {'0':1, '1':2}, {'0':1, '1':2}]
+    param_grid = dict(C=2. ** np.arange(-5, 5),
             penalty=['l2'])
     #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
     clf = LogisticRegression(tol=1e-8, penalty='l1', C=2)
