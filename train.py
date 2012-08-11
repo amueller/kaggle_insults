@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 #from sklearn.feature_extraction.text import TfidfVectorizer
-#from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import train_test_split
 from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
 #from sklearn.svm import LinearSVC
@@ -9,6 +9,9 @@ from sklearn.linear_model import LogisticRegression
 #from sklearn.pipeline import Pipeline
 from scipy import sparse
 #from sklearn.ensemble import RandomForestClassifier
+import matplotlib.pyplot as plt
+
+from time import strftime
 from IPython.core.debugger import Tracer
 
 tracer = Tracer()
@@ -55,17 +58,13 @@ def load_test():
 
 def write_test(labels, fname=None):
     if fname is None:
-        fname = "test_prediction_%d.csv" % time()
+        fname = "test_prediction_%s.csv" % strftime("%d_%H_%M")
     with open("test.csv") as f:
         with open(fname, 'w') as fw:
             fw.write(f.readline())
             for label, line in zip(labels, f):
                 fw.write("%f," % label)
                 fw.write(line)
-
-#def get_fp_fn(clf, X, y, comments):
-    #n_samples = X.shape[0]
-    #inds = np.random.permutation(n_samples)
 
 
 def get_features(comments, vectorizers=None):
@@ -141,18 +140,57 @@ def grid_search():
 
     grid = GridSearchCV(clf, cv=5, param_grid=param_grid, verbose=4,
             n_jobs=11)
-    #print(cross_val_score(clf, counts, labels, cv=3))
+    tracer()
 
     grid.fit(features, labels)
     print(grid.best_score_)
     print(grid.best_params_)
-    #clf.fit(X_train, y_train)
-    #print(clf.score(X_test, y_test))
-    tracer()
     comments_test, dates_test = load_test()
     features_test = get_features(comments_test, vectorizers)
     prob_pred = grid.best_estimator_.predict_proba(features_test)
     write_test(prob_pred[:, 1])
 
+
+def analyze_output():
+    comments, dates, labels = load_data()
+    features, vectorizers = get_features(comments)
+    X_train, X_test, y_train, y_test, comments_train, comments_test = \
+            train_test_split(features, labels, comments)
+    clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.125)
+    clf.fit(X_train, y_train)
+    pred = clf.predict(X_test)
+    print("acc: %f" % (np.mean(pred == y_test)))
+    fp = np.where(pred > y_test)[0]
+    fn = np.where(pred < y_test)[0]
+    fn_comments = comments_test[fn]
+    fp_comments = comments_test[fp]
+    probs = clf.predict_proba(X_test)
+    n_bad = X_test[:, -1].toarray().ravel()
+    fn_comments = np.vstack([fn, n_bad[fn], probs[fn][:, 1], fn_comments]).T
+    fp_comments = np.vstack([fp, n_bad[fp], probs[fp][:, 1], fp_comments]).T
+
+    # visualize important features
+    #important = np.abs(clf.coef_.ravel()) > 0.001
+    important = np.abs(clf.coef_.ravel()) > 0.1
+    feature_names = [vc.get_feature_names() for vc in vectorizers]
+    feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len', 'mean_len', 'n_bad'])
+    feature_names = np.hstack(feature_names)
+
+    f_imp = feature_names[important]
+    coef = clf.coef_.ravel()[important]
+    inds = np.argsort(coef)
+    f_imp = f_imp[inds]
+    coef = coef[inds]
+    plt.plot(coef)
+    ax = plt.gca()
+    ax.set_xticks(np.arange(len(coef)))
+    labels = ax.set_xticklabels(f_imp)
+    for label in labels:
+        label.set_rotation(90)
+    plt.show()
+
+    tracer()
+
 if __name__ == "__main__":
-    grid_search()
+    #grid_search()
+    analyze_output()
