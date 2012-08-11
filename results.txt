@@ -7,6 +7,32 @@ LinearSVC L1 C: 1.0 0.838
 LinearSVC L2 C: 1.0 0.84064462306075627,
 SVC  ({'C': 100.0, 'gamma': 1.0}, 0.83075610310461856
 
-features: number of words, average word-length, exlamation marks, all-caps,
-underscores, uncommon words?, quotes? one-letter variations, longest "word" aka
-tolololol, named entity, time?, any word twice?
+
+char 2-gram + word 2-gram : 83.9 char 2-gram doesn't help?
+char 4-gram + word 2-gram : 0.84216553560828478
+with char 1-gram ? 0.84190434936067127
+char 6-gram 0.84444273315043883  {'penalty': 'l2', 'C': 0.125}
+
+
+word 2-gram + features 0.84722978935040338 {'penalty': 'l2', 'C': 2.0}
+
+
+
+
+
+features:
+ number of words,
+ average word-length, 
+exlamation marks,
+ all-caps,
+underscores,
+ uncommon words?,
+ quotes?
+ one-letter variations,
+ longest "word" aka tolololol,
+named entity,
+time?,
+any word twice?
+comparison to "bad word vocabulary"
+
+time doesn't help?
