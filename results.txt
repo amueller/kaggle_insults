@@ -20,6 +20,8 @@ features+ word 2-gram + char 6-gram 0.847486162584 {'penalty': 'l2', 'C': 0.125}
 
 binary=true: 0.849511158172 {'penalty': 'l2', 'C': 0.25}
 
+corrected badword list 0.852294043093
+
 features:
  number of words,
  average word-length, 

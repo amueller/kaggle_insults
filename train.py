@@ -1,15 +1,16 @@
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
 #from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cross_validation import train_test_split
 from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
-#from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
-#from sklearn.pipeline import Pipeline
-from scipy import sparse
-#from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
+from features import TextFeatureTransformer
 import matplotlib.pyplot as plt
+
+#from sklearn.externals.joblib import Memory
+
+#memory = Memory(cachdir="cache")
 
 from time import strftime
 from IPython.core.debugger import Tracer
@@ -67,90 +68,37 @@ def write_test(labels, fname=None):
                 fw.write(line)
 
 
-def get_features(comments, vectorizers=None):
-    # get the google bad word list
-    with open("google_badlist.txt") as f:
-        badwords = [l.strip() for l in f.readlines()]
-
-    print("vecorizing")
-    if vectorizers is None:
-        countvect = CountVectorizer(max_n=2, binary=True)
-        countvect_char = CountVectorizer(max_n=6, analyzer="char", binary=True)
-        #countvect = TfidfVectorizer()
-
-        counts = countvect.fit_transform(comments)
-        counts_char = countvect_char.fit_transform(comments)
-    else:
-        counts, counts_char = \
-                [cv.transform(comments) for cv in vectorizers]
-
-    counts = counts.tocsr()
-    counts_char = counts_char.tocsr()
-
-    ## some handcrafted features!
-    n_words = [len(c.split()) for c in comments]
-    n_chars = [len(c) for c in comments]
-    # number of uppercase words
-    allcaps = [np.sum([w.isupper() for w in comment.split()])
-           for comment in comments]
-    # longest word
-    max_word_len = [np.max([len(w) for w in c.split()]) for c in comments]
-    # average word length
-    mean_word_len = [np.mean([len(w) for w in c.split()]) for c in comments]
-    # number of google badwords:
-    n_bad = [np.sum([w in c.lower() for w in badwords]) for c in comments]
-
-    features = np.array([n_words, n_chars, allcaps, max_word_len,
-        mean_word_len, n_bad]).T
-
-    features = sparse.hstack([counts, counts_char, features])
-    if vectorizers is None:
-        return features, (countvect, countvect_char)
-    return features
-
-
 def grid_search():
     comments, dates, labels = load_data()
-    features, vectorizers = get_features(comments)
-
-    #countvect = TfidfVectorizer()
-
-    #param_grid = dict(logr__C=2. ** np.arange(-6, 4),
-            #logr__penalty=['l1', 'l2'],
-            #vect__max_n=np.arange(1, 4), vect__lowercase=[True, False])
-    #param_grid = dict(C=2. ** np.arange(-3, 4),
-            #penalty=['l1', 'l2'])
-    #class_weights = [{'0':1, '1':1}, 'auto', None, {'0':1, '1':2}, {'0':1, '1':2}]
-    param_grid = dict(C=2. ** np.arange(-5, 5),
-            penalty=['l2'])
-    #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
+    param_grid = dict(logr__C=2. ** np.arange(-6, 4),
+            logr__penalty=['l2'],
+            vect__word_max_n=np.arange(1, 4))
+    #param_grid = dict(C=2. ** np.arange(-5, 5),
+            #penalty=['l2'])
     clf = LogisticRegression(tol=1e-8, penalty='l1', C=2)
-    #pipeline = Pipeline([('vect', countvect), ('logr', clf)])
-    #feature_selector.fit(comments, labels)
-    #features = feature_selector.transform(comments).toarray()
-    #clf = LinearSVC(tol=1e-8, penalty='l1', dual=False, C=0.5)
-    clf = LogisticRegression(tol=1e-8)
-
-    grid = GridSearchCV(clf, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=11)
+    ft = TextFeatureTransformer()
+    pipeline = Pipeline([('vect', ft), ('logr', clf)])
+    grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
+            n_jobs=1)
     tracer()
 
-    grid.fit(features, labels)
+    grid.fit(comments, labels)
     print(grid.best_score_)
     print(grid.best_params_)
     comments_test, dates_test = load_test()
-    features_test = get_features(comments_test, vectorizers)
-    prob_pred = grid.best_estimator_.predict_proba(features_test)
+    prob_pred = grid.best_estimator_.predict_proba(comments_test)
     write_test(prob_pred[:, 1])
 
 
 def analyze_output():
     comments, dates, labels = load_data()
-    features, vectorizers = get_features(comments)
-    X_train, X_test, y_train, y_test, comments_train, comments_test = \
-            train_test_split(features, labels, comments)
+    y_train, y_test, comments_train, comments_test = \
+            train_test_split(labels, comments)
     clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.125)
+    ft = TextFeatureTransformer().fit(comments_train)
+    X_train = ft.transform(comments_train)
     clf.fit(X_train, y_train)
+    X_test = ft.transform(comments_test)
     pred = clf.predict(X_test)
     print("acc: %f" % (np.mean(pred == y_test)))
     fp = np.where(pred > y_test)[0]
@@ -165,9 +113,7 @@ def analyze_output():
     # visualize important features
     #important = np.abs(clf.coef_.ravel()) > 0.001
     important = np.abs(clf.coef_.ravel()) > 0.1
-    feature_names = [vc.get_feature_names() for vc in vectorizers]
-    feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len', 'mean_len', 'n_bad'])
-    feature_names = np.hstack(feature_names)
+    feature_names = ft.get_feature_names()
 
     f_imp = feature_names[important]
     coef = clf.coef_.ravel()[important]
@@ -185,5 +131,5 @@ def analyze_output():
     tracer()
 
 if __name__ == "__main__":
-    #grid_search()
-    analyze_output()
+    grid_search()
+    #analyze_output()
