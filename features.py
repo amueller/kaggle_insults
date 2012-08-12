@@ -5,6 +5,16 @@ from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import CountVectorizer
 
 
+class DensifyTransformer(BaseEstimator):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        if sparse.issparse(X):
+            X = X.toarray()
+        return X
+
+
 class TextFeatureTransformer(BaseEstimator):
     def __init__(self, word_max_n=2, char_min_n=1, char_max_n=6, char=False):
         self.word_max_n = word_max_n
