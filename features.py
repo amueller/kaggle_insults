@@ -18,8 +18,8 @@ class TextFeatureTransformer(BaseEstimator):
         else:
             vcs = [self.countvect]
         feature_names = [vc.get_feature_names() for vc in vcs]
-        feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len',
-            'mean_len', 'n_bad'])
+        feature_names.append(['n_words', 'n_chars', 'allcaps', '@', '!',
+            'max_len', 'mean_len', 'n_bad'])
         feature_names = np.hstack(feature_names)
         return feature_names
 
@@ -58,9 +58,11 @@ class TextFeatureTransformer(BaseEstimator):
         # number of google badwords:
         n_bad = [np.sum([w in c.lower() for w in self.badwords_])
                                                 for c in comments]
+        exclamation = [c.count("!") for c in comments]
+        addressing = [c.count("@") for c in comments]
 
         features = np.array([n_words, n_chars, allcaps, max_word_len,
-            mean_word_len, n_bad]).T
+            mean_word_len, exclamation, addressing, n_bad]).T
 
         if self.char:
             counts_char = self.countvect_char.transform(comments).tocsr()
