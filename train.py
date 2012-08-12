@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from features import TextFeatureTransformer
 from sklearn.metrics import auc_score
+from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 
 #from sklearn.externals.joblib import Memory
@@ -75,13 +76,30 @@ def write_test(labels, fname=None):
                 fw.write(line)
 
 
+def grid_search_feature_selection():
+    comments, dates, labels = load_data()
+    clf = LogisticRegression(tol=1e-8, C=0.5, penalty='l1')
+    ft = TextFeatureTransformer(char=False, word_max_n=3)
+    print("training and transforming for linear model")
+    X = ft.fit(comments).transform(comments)
+    X_ = clf.fit_transform(X, labels).toarray()
+    print("training grid search")
+    rf = RandomForestClassifier(n_estimators=10)
+    param_grid = dict(max_depth=np.arange(1, 10), max_features=['sqrt', 'log2',
+        None], min_samples_leaf=np.arange(1, 15, 3))
+    grid = GridSearchCV(rf, cv=5, param_grid=param_grid, verbose=4,
+            n_jobs=1, score_func=auc_score)
+    grid.fit(X_, labels)
+    tracer()
+
+
 def grid_search():
     comments, dates, labels = load_data()
-    param_grid = dict(logr__C=2. ** np.arange(-6, 1), logr__penalty=['l2'],
+    param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
             vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
-            vect__char_min_n=[3], logr__class_weight=[None, 'auto'])
+            vect__char_min_n=[3])
     clf = LogisticRegression(tol=1e-8)
-    ft = TextFeatureTransformer(char=True)
+    ft = TextFeatureTransformer(char=False)
     pipeline = Pipeline([('vect', ft), ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
             n_jobs=11, score_func=auc_score)
@@ -108,6 +126,7 @@ def analyze_output():
     probs = clf.predict_proba(X_test)
     pred = clf.predict(X_test)
     print("auc: %f" % auc_score(y_test, probs[:, 1]))
+
     fp = np.where(pred > y_test)[0]
     fn = np.where(pred < y_test)[0]
     fn_comments = comments_test[fn]
@@ -136,6 +155,8 @@ def analyze_output():
 
     tracer()
 
+
 if __name__ == "__main__":
     #grid_search()
-    analyze_output()
+    #analyze_output()
+    grid_search_feature_selection()
