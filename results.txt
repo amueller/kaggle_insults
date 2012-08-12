@@ -42,6 +42,20 @@ L2 no chars:
 0.883419143416
 {'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
 
+No chars?!
+0.884426825818
+{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
+
+L1, no chars, !, @
+0.883628749026
+{'vect__char_max_n': 4, 'logr__C': 0.5, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'}
+
+L2, no chars, !, @
+0.885277997947
+{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
+
+
+
 features:
  number of words,
  average word-length, 

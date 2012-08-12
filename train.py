@@ -26,6 +26,7 @@ def load_data():
     dates = []
     labels = []
 
+    #with codecs.open("train.csv", encoding="utf-8") as f:
     with open("train.csv") as f:
         f.readline()
         for line in f:
@@ -35,6 +36,8 @@ def load_data():
             comment = ",".join(splitstring[2:])
             comment = comment.strip().strip('"')
             comment.replace('_', ' ')
+            comment = comment.replace("\\\\", "\\")
+            comment = comment.decode('unicode-escape')
             comments.append(comment)
     labels = np.array(labels, dtype=np.int)
     dates = np.array(dates)
@@ -54,6 +57,8 @@ def load_test():
             comment = ",".join(splitstring[1:])
             comment = comment.strip().strip('"')
             comment.replace('_', ' ')
+            comment = comment.replace("\\\\", "\\")
+            comment = comment.decode('unicode-escape')
             comments.append(comment)
     dates = np.array(dates)
     return comments, dates
@@ -94,25 +99,26 @@ def analyze_output():
     comments, dates, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
             train_test_split(labels, comments)
-    clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.125)
-    ft = TextFeatureTransformer().fit(comments_train)
+    clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.5)
+    ft = TextFeatureTransformer(char_max_n=4, word_max_n=3,
+            char_min_n=3).fit(comments_train)
     X_train = ft.transform(comments_train)
     clf.fit(X_train, y_train)
     X_test = ft.transform(comments_test)
+    probs = clf.predict_proba(X_test)
     pred = clf.predict(X_test)
-    print("acc: %f" % (np.mean(pred == y_test)))
+    print("auc: %f" % auc_score(y_test, probs[:, 1]))
     fp = np.where(pred > y_test)[0]
     fn = np.where(pred < y_test)[0]
     fn_comments = comments_test[fn]
     fp_comments = comments_test[fp]
-    probs = clf.predict_proba(X_test)
     n_bad = X_test[:, -1].toarray().ravel()
     fn_comments = np.vstack([fn, n_bad[fn], probs[fn][:, 1], fn_comments]).T
     fp_comments = np.vstack([fp, n_bad[fp], probs[fp][:, 1], fp_comments]).T
 
     # visualize important features
     #important = np.abs(clf.coef_.ravel()) > 0.001
-    important = np.abs(clf.coef_.ravel()) > 0.1
+    important = np.abs(clf.coef_.ravel()) > 0.5
     feature_names = ft.get_feature_names()
 
     f_imp = feature_names[important]
@@ -131,5 +137,5 @@ def analyze_output():
     tracer()
 
 if __name__ == "__main__":
-    grid_search()
-    #analyze_output()
+    #grid_search()
+    analyze_output()
