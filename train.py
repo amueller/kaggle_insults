@@ -6,6 +6,7 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from features import TextFeatureTransformer
+from sklearn.metrics import auc_score
 import matplotlib.pyplot as plt
 
 #from sklearn.externals.joblib import Memory
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 
 from time import strftime
 from IPython.core.debugger import Tracer
+
 
 tracer = Tracer()
 
@@ -70,17 +72,14 @@ def write_test(labels, fname=None):
 
 def grid_search():
     comments, dates, labels = load_data()
-    param_grid = dict(logr__C=2. ** np.arange(-6, 4),
-            logr__penalty=['l2'],
-            vect__word_max_n=np.arange(1, 4))
-    #param_grid = dict(C=2. ** np.arange(-5, 5),
-            #penalty=['l2'])
-    clf = LogisticRegression(tol=1e-8, penalty='l1', C=2)
-    ft = TextFeatureTransformer()
+    param_grid = dict(logr__C=2. ** np.arange(-6, 1), logr__penalty=['l2'],
+            vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
+            vect__char_min_n=[3], logr__class_weight=[None, 'auto'])
+    clf = LogisticRegression(tol=1e-8)
+    ft = TextFeatureTransformer(char=True)
     pipeline = Pipeline([('vect', ft), ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=1)
-    tracer()
+            n_jobs=11, score_func=auc_score)
 
     grid.fit(comments, labels)
     print(grid.best_score_)
@@ -88,6 +87,7 @@ def grid_search():
     comments_test, dates_test = load_test()
     prob_pred = grid.best_estimator_.predict_proba(comments_test)
     write_test(prob_pred[:, 1])
+    tracer()
 
 
 def analyze_output():

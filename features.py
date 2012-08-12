@@ -6,13 +6,17 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 
 class TextFeatureTransformer(BaseEstimator):
-    def __init__(self, word_max_n=2, char_min_n=1, char_max_n=6):
+    def __init__(self, word_max_n=2, char_min_n=1, char_max_n=6, char=False):
         self.word_max_n = word_max_n
         self.char_min_n = char_min_n
         self.char_max_n = char_max_n
+        self.char = char
 
     def get_feature_names(self):
-        vcs = [self.countvect, self.countvect_char]
+        if self.char:
+            vcs = [self.countvect, self.countvect_char]
+        else:
+            vcs = [self.countvect]
         feature_names = [vc.get_feature_names() for vc in vcs]
         feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len',
             'mean_len', 'n_bad'])
@@ -27,19 +31,18 @@ class TextFeatureTransformer(BaseEstimator):
 
         print("vecorizing")
         countvect = CountVectorizer(max_n=self.word_max_n, binary=True)
-        countvect_char = CountVectorizer(max_n=self.char_max_n,
-                min_n=self.char_min_n, analyzer="char", binary=True)
-        #countvect = TfidfVectorizer()
-
         countvect.fit(comments)
-        countvect_char.fit(comments)
         self.countvect = countvect
-        self.countvect_char = countvect_char
+
+        if self.char:
+            countvect_char = CountVectorizer(max_n=self.char_max_n,
+                    min_n=self.char_min_n, analyzer="char", binary=True)
+            countvect_char.fit(comments)
+            self.countvect_char = countvect_char
         return self
 
     def transform(self, comments):
         counts = self.countvect.transform(comments).tocsr()
-        counts_char = self.countvect_char.transform(comments).tocsr()
 
         ## some handcrafted features!
         n_words = [len(c.split()) for c in comments]
@@ -59,5 +62,10 @@ class TextFeatureTransformer(BaseEstimator):
         features = np.array([n_words, n_chars, allcaps, max_word_len,
             mean_word_len, n_bad]).T
 
-        features = sparse.hstack([counts, counts_char, features])
+        if self.char:
+            counts_char = self.countvect_char.transform(comments).tocsr()
+            features = sparse.hstack([counts, counts_char, features])
+        else:
+            features = sparse.hstack([counts, features])
+
         return features.tocsr()
