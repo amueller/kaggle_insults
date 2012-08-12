@@ -22,6 +22,26 @@ binary=true: 0.849511158172 {'penalty': 'l2', 'C': 0.25}
 
 corrected badword list 0.852294043093
 
+{'vect__char_max_n': 4, 'vect__word_max_n': 3, 'logr__C': 0.125, 'logr__penalty': 'l2'}
+0.851030145513
+{'vect__char_max_n': 4, 'vect__word_max_n': 1, 'logr__C': 0.03125, 'logr__penalty': 'l2', 'vect__char_min_n': 3}
+0.852803260015
+
+
+FROM NOW ON AUC!!!
+0.884426825818
+{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
+L1:
+0.883239800358
+{'vect__char_max_n': 4, 'logr__C': 0.25, 'vect__word_max_n': 1, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'}
+L1 no chars:
+0.881108382716
+{'vect__char_max_n': 4, 'logr__C': 0.5, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'
+
+L2 no chars:
+0.883419143416
+{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
+
 features:
  number of words,
  average word-length, 
@@ -38,3 +58,10 @@ any word twice?
 comparison to "bad word vocabulary"
 
 time doesn't help?
+
+
+submission 3:
+test_prediction_12_12_30
+l2 with features + char
+{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
+
