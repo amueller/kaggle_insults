@@ -58,6 +58,7 @@ def load_test():
             comment = ",".join(splitstring[1:])
             comment = comment.strip().strip('"')
             comment.replace('_', ' ')
+            comment.replace('.', ' ')
             comment = comment.replace("\\\\", "\\")
             comment = comment.decode('unicode-escape')
             comments.append(comment)
@@ -76,6 +77,25 @@ def write_test(labels, fname=None):
                 fw.write(line)
 
 
+def rfe_test():
+    from sklearn.feature_selection import RFE
+    comments, dates, labels = load_data()
+    y_train, y_test, comments_train, comments_test = \
+            train_test_split(labels, comments)
+    clf = LogisticRegression(C=1, tol=1e-8)
+    rfe = RFE(clf, step=1, n_features_to_select=12000)
+    ft = TextFeatureTransformer(word_max_n=1).fit(comments_train)
+    X_train = ft.transform(comments_train)
+    rfe.fit(X_train, y_train)
+    X_train_selected = rfe.transform(X_train)
+    X_test = ft.transform(comments_test)
+    X_test_selected = rfe.transform(X_test)
+    clf.fit(X_train_selected, y_train)
+    probs = clf.predict_proba(X_test_selected)
+    print("auc: %f" % auc_score(y_test, probs[:, 1]))
+    tracer()
+
+
 def grid_search_feature_selection():
     comments, dates, labels = load_data()
     clf = LogisticRegression(tol=1e-8, C=0.5, penalty='l1')
@@ -84,7 +104,6 @@ def grid_search_feature_selection():
     #X = ft.fit(comments).transform(comments)
     #X_ = clf.fit_transform(X, labels).toarray()
     print("training grid search")
-    #rf = RandomForestClassifier(n_estimators=200)
     rf = RandomForestClassifier(n_estimators=200)
     dt = DensifyTransformer()
     pipeline = Pipeline([("features", ft), ("l1select", clf),
@@ -112,14 +131,15 @@ def grid_search_feature_selection():
 
 def grid_search():
     comments, dates, labels = load_data()
-    param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
-            vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
-            vect__char_min_n=[3])
+    #param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
+            #vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
+            #vect__char_min_n=[3])
+    param_grid = dict(logr__C=2. ** np.arange(0, 6))
     clf = LogisticRegression(tol=1e-8)
-    ft = TextFeatureTransformer(char=False)
+    ft = TextFeatureTransformer(char=False, word=False)
     pipeline = Pipeline([('vect', ft), ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=11, score_func=auc_score)
+            n_jobs=1, score_func=auc_score)
 
     grid.fit(comments, labels)
     print(grid.best_score_)
@@ -134,9 +154,10 @@ def analyze_output():
     comments, dates, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
             train_test_split(labels, comments)
-    clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.5)
-    ft = TextFeatureTransformer(char_max_n=4, word_max_n=3,
-            char_min_n=3).fit(comments_train)
+    #clf = LogisticRegression(tol=1e-8, penalty='l1', C=0.5)
+    clf = LogisticRegression(tol=1e-8, penalty='l1', C=32)
+    ft = TextFeatureTransformer(char=False, word=False, char_max_n=4,
+            word_max_n=3, char_min_n=3).fit(comments_train)
     X_train = ft.transform(comments_train)
     clf.fit(X_train, y_train)
     X_test = ft.transform(comments_test)
@@ -148,13 +169,13 @@ def analyze_output():
     fn = np.where(pred < y_test)[0]
     fn_comments = comments_test[fn]
     fp_comments = comments_test[fp]
-    n_bad = X_test[:, -1].toarray().ravel()
+    n_bad = X_test[:, -2].toarray().ravel()
     fn_comments = np.vstack([fn, n_bad[fn], probs[fn][:, 1], fn_comments]).T
     fp_comments = np.vstack([fp, n_bad[fp], probs[fp][:, 1], fp_comments]).T
 
     # visualize important features
-    #important = np.abs(clf.coef_.ravel()) > 0.001
-    important = np.abs(clf.coef_.ravel()) > 0.5
+    important = np.abs(clf.coef_.ravel()) > 0.001
+    #important = np.abs(clf.coef_.ravel()) > 0.5
     feature_names = ft.get_feature_names()
 
     f_imp = feature_names[important]
@@ -175,5 +196,6 @@ def analyze_output():
 
 if __name__ == "__main__":
     #grid_search()
-    #analyze_output()
-    grid_search_feature_selection()
+    analyze_output()
+    #grid_search_feature_selection()
+    #rfe_test()

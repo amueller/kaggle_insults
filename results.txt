@@ -54,6 +54,18 @@ L2, no chars, !, @
 0.885277997947
 {'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
 
+L2, nochars, fixed unicode
+0.887569120472
+{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
+test_prediction_12_14_41.csv
+
+L2 with chars
+{'vect__char_max_n': 4, 'logr__C': 0.0625, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
+
+L1 feature selection + RF
+0.89956105124940811
+clf = LogisticRegression(tol=1e-8, C=0.5, penalty='l1')
+{'max_features': 'log2', 'max_depth': 38, 'min_samples_leaf': 1}
 
 
 features:
@@ -78,4 +90,9 @@ submission 3:
 test_prediction_12_12_30
 l2 with features + char
 {'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
+
+submission 4:
+big grid search:
+{'rf__max_depth': 35, 'l1select__C': 0.8, 'rf__max_features': 'log2', 'features__word_max_n': 1, 'features__char': False, 'rf__min_samples_leaf': 1}
+test_prediction_13_00_16.csv
 
