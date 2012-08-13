@@ -71,7 +71,8 @@ def write_test(labels, fname=None):
         fname = "test_prediction_%s.csv" % strftime("%d_%H_%M")
     with open("test.csv") as f:
         with open(fname, 'w') as fw:
-            fw.write(f.readline())
+            f.readline()
+            fw.write("Insult,Date,Comment\n")
             for label, line in zip(labels, f):
                 fw.write("%f," % label)
                 fw.write(line)
@@ -130,16 +131,27 @@ def grid_search_feature_selection():
 
 
 def grid_search():
+    #from sklearn.linear_model import SGDClassifier
+    from sklearn.feature_selection import SelectKBest
     comments, dates, labels = load_data()
-    #param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
-            #vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
-            #vect__char_min_n=[3])
-    param_grid = dict(logr__C=2. ** np.arange(0, 6))
+    param_grid = dict(logr__C=2. ** np.arange(-5, 2), logr__penalty=['l2'],
+            vect__word_max_n=[2], vect__char_max_n=[4],
+            vect__char_min_n=[3], selector__k=[200, 500, 1000, 1500, 2000, 2500, 3000])
+    #param_grid = dict(logr__C=2. ** np.arange(-5, 3))
+    #param_grid = dict(logr__alpha=10. ** np.arange(-5, 3),
+            #logr__rho=np.linspace(0.0, 1, 11))
     clf = LogisticRegression(tol=1e-8)
-    ft = TextFeatureTransformer(char=False, word=False)
-    pipeline = Pipeline([('vect', ft), ('logr', clf)])
+    dt = DensifyTransformer()
+    selector = SelectKBest()
+    #clf = SGDClassifier(n_iter=150, loss='log', penalty='elasticnet')
+    ft = TextFeatureTransformer(char=False, word=True, char_min_n=3,
+            char_max_n=4, word_max_n=1)
+    #ft = TextFeatureTransformer(char=False, word=True, char_min_n=3,
+            #char_max_n=4, word_max_n=2, designed=False)
+    pipeline = Pipeline([('vect', ft), ('densify', dt), ('selector', selector),
+        ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=1, score_func=auc_score)
+            n_jobs=3, score_func=auc_score)
 
     grid.fit(comments, labels)
     print(grid.best_score_)
@@ -195,7 +207,7 @@ def analyze_output():
 
 
 if __name__ == "__main__":
-    #grid_search()
-    analyze_output()
+    grid_search()
+    #analyze_output()
     #grid_search_feature_selection()
     #rfe_test()
