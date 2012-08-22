@@ -71,7 +71,8 @@ def write_test(labels, fname=None):
         fname = "test_prediction_%s.csv" % strftime("%d_%H_%M")
     with open("test.csv") as f:
         with open(fname, 'w') as fw:
-            fw.write(f.readline())
+            f.readline()
+            fw.write("Insult,Date,Comment\n")
             for label, line in zip(labels, f):
                 fw.write("%f," % label)
                 fw.write(line)
@@ -130,6 +131,7 @@ def grid_search_feature_selection():
 
 
 def grid_search():
+    #from sklearn.linear_model import SGDClassifier
     comments, dates, labels = load_data()
     #param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
             #vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
@@ -139,7 +141,7 @@ def grid_search():
     ft = TextFeatureTransformer(char=False, word=True, designed=False)
     pipeline = Pipeline([('vect', ft), ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=1, score_func=auc_score)
+            n_jobs=3, score_func=auc_score)
 
     grid.fit(comments, labels)
     print(grid.best_score_)
