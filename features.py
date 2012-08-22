@@ -16,11 +16,10 @@ class DensifyTransformer(BaseEstimator):
 
 
 class TextFeatureTransformer(BaseEstimator):
-    def __init__(self, word_max_n=2, char_min_n=1, char_max_n=6, char=False,
+    def __init__(self, word_range=(1, 1), char_range=(1, 1), char=False,
             word=True, designed=True):
-        self.word_max_n = word_max_n
-        self.char_min_n = char_min_n
-        self.char_max_n = char_max_n
+        self.word_range = word_range
+        self.char_range = char_range
         self.char = char
         self.designed = designed
         self.word = word
@@ -29,7 +28,7 @@ class TextFeatureTransformer(BaseEstimator):
         feature_names = []
         if self.word:
             feature_names.append(self.countvect.get_feature_names())
-        if self.word:
+        if self.char:
             feature_names.append(self.countvect_char.get_feature_names())
         if self.designed:
             feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len',
@@ -47,13 +46,14 @@ class TextFeatureTransformer(BaseEstimator):
 
         print("vecorizing")
         if self.word:
-            countvect = CountVectorizer(max_n=self.word_max_n, binary=True)
+            countvect = CountVectorizer(ngram_range=self.word_range,
+                    binary=True)
             countvect.fit(comments)
             self.countvect = countvect
 
         if self.char:
-            countvect_char = CountVectorizer(max_n=self.char_max_n,
-                    min_n=self.char_min_n, analyzer="char", binary=True)
+            countvect_char = CountVectorizer(ngram_range=self.char_range,
+                    analyzer="char", binary=True)
             countvect_char.fit(comments)
             self.countvect_char = countvect_char
         return self

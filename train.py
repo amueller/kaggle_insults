@@ -134,9 +134,9 @@ def grid_search():
     #param_grid = dict(logr__C=2. ** np.arange(-6, 2), logr__penalty=['l1'],
             #vect__word_max_n=np.arange(1, 4), vect__char_max_n=[4],
             #vect__char_min_n=[3])
-    param_grid = dict(logr__C=2. ** np.arange(0, 6))
+    param_grid = dict(logr__C=2. ** np.arange(-3, 3))
     clf = LogisticRegression(tol=1e-8)
-    ft = TextFeatureTransformer(char=False, word=False)
+    ft = TextFeatureTransformer(char=False, word=True, designed=False)
     pipeline = Pipeline([('vect', ft), ('logr', clf)])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
             n_jobs=1, score_func=auc_score)
@@ -144,9 +144,9 @@ def grid_search():
     grid.fit(comments, labels)
     print(grid.best_score_)
     print(grid.best_params_)
-    comments_test, dates_test = load_test()
-    prob_pred = grid.best_estimator_.predict_proba(comments_test)
-    write_test(prob_pred[:, 1])
+    #comments_test, dates_test = load_test()
+    #prob_pred = grid.best_estimator_.predict_proba(comments_test)
+    #write_test(prob_pred[:, 1])
     tracer()
 
 
@@ -195,7 +195,7 @@ def analyze_output():
 
 
 if __name__ == "__main__":
-    #grid_search()
-    analyze_output()
+    grid_search()
+    #analyze_output()
     #grid_search_feature_selection()
     #rfe_test()
