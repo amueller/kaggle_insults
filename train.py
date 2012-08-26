@@ -78,7 +78,24 @@ def write_test(labels, fname=None):
                 fw.write(line)
 
 
-def rfe_test():
+def jellyfish():
+    import jellyfish
+
+    comments, dates, labels = load_data()
+    y_train, y_test, comments_train, comments_test = \
+            train_test_split(labels, comments)
+    ft = TextFeatureTransformer(word_range=(1, 1),
+            tokenizer_func=jellyfish.metaphone).fit(comments_train)
+    tracer()
+    clf = LogisticRegression(C=1, tol=1e-8)
+    X_train = ft.transform(comments_train)
+    clf.fit(X_train, y_train)
+    X_test = ft.transform(comments_test)
+    probs = clf.predict_proba(X_test)
+    print("auc: %f" % auc_score(y_test, probs[:, 1]))
+
+
+def feature_selection_test():
     from sklearn.feature_selection import RFE
     comments, dates, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
@@ -197,7 +214,8 @@ def analyze_output():
 
 
 if __name__ == "__main__":
-    grid_search()
+    #grid_search()
     #analyze_output()
     #grid_search_feature_selection()
-    #rfe_test()
+    #feature_selection_test()
+    jellyfish()

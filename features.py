@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import sparse
+import re
 
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import CountVectorizer
@@ -17,12 +18,13 @@ class DensifyTransformer(BaseEstimator):
 
 class TextFeatureTransformer(BaseEstimator):
     def __init__(self, word_range=(1, 1), char_range=(1, 1), char=False,
-            word=True, designed=True):
+            word=True, designed=True, tokenizer_func=None):
         self.word_range = word_range
         self.char_range = char_range
         self.char = char
         self.designed = designed
         self.word = word
+        self.tokenizer_func = tokenizer_func
 
     def get_feature_names(self):
         feature_names = []
@@ -46,8 +48,17 @@ class TextFeatureTransformer(BaseEstimator):
 
         print("vecorizing")
         if self.word:
+            if self.tokenizer_func != None:
+                def build_tokenizer(func):
+                    regexp = re.compile(ur"\b\w\w+\b")
+                    tokenizer = lambda doc: [func(word) for word in
+                            regexp.findall(doc)]
+                    return tokenizer
+                tokenizer = build_tokenizer(self.tokenizer_func)
+            else:
+                tokenizer = None
             countvect = CountVectorizer(ngram_range=self.word_range,
-                    binary=True)
+                    binary=True, tokenizer=tokenizer)
             countvect.fit(comments)
             self.countvect = countvect
 
