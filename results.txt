@@ -86,7 +86,72 @@ comparison to "bad word vocabulary"
 time doesn't help?
 
 
-submission 3:
+ss50 0.899289015735
+{'logr__C': 0.015625, 'vect__char_range': (1, 4), 'vect__word_range': (1, 2)}
+0.896956114795
+{'logr__C': 0.01, 'vect__char_range': (1, 5), 'vect__word_range': (1, 3)}
+
+ss5 0.904839161565
+{'logr__C': 0.015625, 'vect__char_range': (1, 5), 'vect__word_range': (1, 3)}
+
+min_df=2
+ss50 0.897950956364 +-0.01042787
+{'logr__C': 0.01, 'vect__char_range': (1, 5), 'vect__word_range': (1, 3)}
+
+min_df=1
+ss50 0.899167675844 +-0.00996715
+{'logr__C': 0.015625, 'vect__char_range': (1, 5), 'vect__word_range': (1, 2)}
+
+min_df=1 nochar
+0.889458659739
+{'logr__C': 1.0, 'vect__word_range': (1, 2)}
+
+min_df=2 nochar
+0.889937560119
+{'logr__C': 0.5, 'vect__word_range': (1, 3)}
+
+only designed ss20:
+0.754171776832
+{'logr__C': 0.125}
+
+just words ss20, mindf2
+0.881163938504
+{'logr__C': 0.25, 'vect__word_range': (1, 3)}
+
+no words: ss10
+0.906459334679
+{'logr__C': 4.0, 'vect__char_range': (1, 4)}
+
+no words: ss20
+0.906488000861
+{'logr__C': 4, 'vect__char_range': (1, 4)}
+
+no words, more params, ss10
+0.907882622299
+{'logr__C': 6, 'vect__char_range': (1, 5)}
+
+no words, more params, ss20
+0.904469490972
+{'logr__C': 9, 'vect__char_range': (1, 5)}
+
+no words, classif selection
+0.909000343987
+{'logr__C': 9, 'select__percentile': 30, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+no words, chi2 selection
+0.909025637541
+{'logr__C': 16.0, 'select__percentile': 30, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+no words, chi2 selection
+0.910659667085
+{'logr__C': 13, 'select__percentile': 10, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+0.910878313902
+{'logr__C': 19, 'select__percentile': 7, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+
+
+submission 3: (=1)
 test_prediction_12_12_30
 l2 with features + char
 {'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
@@ -96,3 +161,19 @@ big grid search:
 {'rf__max_depth': 35, 'l1select__C': 0.8, 'rf__max_features': 'log2', 'features__word_max_n': 1, 'features__char': False, 'rf__min_samples_leaf': 1}
 test_prediction_13_00_16.csv
 
+submission 5: (=2)
+???
+big grid search:
+
+Submission 3:
+no words
+test_prediction_01_20_56.csv
+0.901729056251
+{'logr__C': 7, 'vect__char_range': (1, 5)}
+
+
+Submission 4:
+test_prediction_02_21_35.csv
+no words, chi2 selection
+0.910878313902
+{'logr__C': 19, 'select__percentile': 7, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
