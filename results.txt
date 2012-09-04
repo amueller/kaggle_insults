@@ -147,9 +147,37 @@ no words, chi2 selection
 {'logr__C': 13, 'select__percentile': 10, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
 
 0.910878313902
-{'logr__C': 19, 'select__percentile': 7, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+{'logr__C': 20, 'select__percentile': 7, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+precompute features, ss50: coarse selction :-/ throw away
+0.907881815965
+{'logr__C': 16.0, 'select__percentile': 6}
+
+0.911123747335
+{'logr__C': 15, 'select__percentile': 8}
+0.911813319384
+{'logr__C': 15, 'select__percentile': 11}
+
+ss 50:
+0.910450058337
+{'logr__C': 12, 'select__percentile': 9}
 
 
+
+feature selection on words + chars, chi2:
+0.912640914406
+{'logr__C': 4.0, 'select__percentile': 16, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}
+
+0.913432113519
+{'logr__C': 8, 'select__percentile': 15}
+
+with updated badwords:
+0.915528921865
+{'logr__C': 14, 'select__percentile': 15
+
+with counting bad words:
+0.91333840187
+{'logr__C': 9, 'select__percentile': 13}
 
 submission 3: (=1)
 test_prediction_12_12_30

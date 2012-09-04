@@ -18,7 +18,9 @@ class DensifyTransformer(BaseEstimator):
 
 class BadWordCounter(BaseEstimator):
     def __init__(self):
-        pass
+        with open("my_badlist.txt") as f:
+            badwords = [l.strip() for l in f.readlines()]
+        self.badwords_ = badwords
 
     def get_feature_names(self):
         return ['n_words', 'n_chars', 'allcaps', 'max_len',
@@ -69,6 +71,7 @@ class FeatureStacker(BaseEstimator):
     def fit(self, X, y=None):
         for name, trans in self.transformer_list:
             trans.fit(X, y)
+        return self
 
     def transform(self, X):
         features = []
@@ -76,7 +79,7 @@ class FeatureStacker(BaseEstimator):
             features.append(trans.transform(X))
         issparse = [sparse.issparse(f) for f in features]
         if np.any(issparse):
-            features = sparse.hstack(features).to_csr()
+            features = sparse.hstack(features).tocsr()
         else:
             features = np.hstack(features)
         return features
@@ -100,8 +103,8 @@ class TextFeatureTransformer(BaseEstimator):
             feature_names.append(self.countvect_char.get_feature_names())
         if self.designed:
             feature_names.append(['n_words', 'n_chars', 'allcaps', 'max_len',
-                'mean_len', '@', '!', 'spaces', 'bad_ratio', 'n_bad',
-                'capsratio'])
+                'mean_len', '@', '!', '?', 'dots', 'spaces', 'bad_ratio',
+                'n_bad', 'capsratio'])
         feature_names = np.hstack(feature_names)
         return feature_names
 
@@ -153,14 +156,16 @@ class TextFeatureTransformer(BaseEstimator):
                                                 for c in comments]
         exclamation = [c.count("!") for c in comments]
         addressing = [c.count("@") for c in comments]
+        question = [c.count("?") for c in comments]
         spaces = [c.count(" ") for c in comments]
+        dots = [c.count("...") for c in comments]
 
         allcaps_ratio = np.array(allcaps) / np.array(n_words)
         bad_ratio = np.array(n_bad) / np.array(n_words)
 
         designed = np.array([n_words, n_chars, allcaps, max_word_len,
-            mean_word_len, exclamation, addressing, spaces, bad_ratio, n_bad,
-            allcaps_ratio]).T
+            mean_word_len, exclamation, question, addressing, dots, spaces,
+            bad_ratio, n_bad, allcaps_ratio]).T
 
         features = []
         if self.word:
