@@ -3,7 +3,7 @@ from scipy import sparse
 import re
 
 from sklearn.base import BaseEstimator
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 class DensifyTransformer(BaseEstimator):
@@ -14,6 +14,72 @@ class DensifyTransformer(BaseEstimator):
         if sparse.issparse(X):
             X = X.toarray()
         return X
+
+
+class BadWordCounter(BaseEstimator):
+    def __init__(self):
+        pass
+
+    def get_feature_names(self):
+        return ['n_words', 'n_chars', 'allcaps', 'max_len',
+            'mean_len', '@', '!', 'spaces', 'bad_ratio', 'n_bad',
+            'capsratio']
+
+    def fit(self, documents, y=None):
+        pass
+
+    def transform(self, documents):
+        ## some handcrafted features!
+        n_words = [len(c.split()) for c in documents]
+        n_chars = [len(c) for c in documents]
+        # number of uppercase words
+        allcaps = [np.sum([w.isupper() for w in comment.split()])
+               for comment in documents]
+        # longest word
+        max_word_len = [np.max([len(w) for w in c.split()]) for c in documents]
+        # average word length
+        mean_word_len = [np.mean([len(w) for w in c.split()])
+                                            for c in documents]
+        # number of google badwords:
+        n_bad = [np.sum([c.lower().count(w) for w in self.badwords_])
+                                                for c in documents]
+        exclamation = [c.count("!") for c in documents]
+        addressing = [c.count("@") for c in documents]
+        spaces = [c.count(" ") for c in documents]
+
+        allcaps_ratio = np.array(allcaps) / np.array(n_words)
+        bad_ratio = np.array(n_bad) / np.array(n_words)
+
+        return np.array([n_words, n_chars, allcaps, max_word_len,
+            mean_word_len, exclamation, addressing, spaces, bad_ratio, n_bad,
+            allcaps_ratio]).T
+
+
+class FeatureStacker(BaseEstimator):
+    """Stacks several transformer objects to yield concatenated features.
+    Similar to pipeline, a list of tuples ``(name, estimator)`` is passed
+    to the constructor.
+    """
+    def __init__(self, transformer_list):
+        self.transformer_list = transformer_list
+
+    def get_feature_names(self):
+        pass
+
+    def fit(self, X, y=None):
+        for name, trans in self.transformer_list:
+            trans.fit(X, y)
+
+    def transform(self, X):
+        features = []
+        for name, trans in self.transformer_list:
+            features.append(trans.transform(X))
+        issparse = [sparse.issparse(f) for f in features]
+        if np.any(issparse):
+            features = sparse.hstack(features).to_csr()
+        else:
+            features = np.hstack(features)
+        return features
 
 
 class TextFeatureTransformer(BaseEstimator):
@@ -57,14 +123,14 @@ class TextFeatureTransformer(BaseEstimator):
                 tokenizer = build_tokenizer(self.tokenizer_func)
             else:
                 tokenizer = None
-            countvect = CountVectorizer(ngram_range=self.word_range,
-                    binary=True, tokenizer=tokenizer)
+            countvect = TfidfVectorizer(ngram_range=self.word_range,
+                    binary=False, tokenizer=tokenizer, min_df=2)
             countvect.fit(comments)
             self.countvect = countvect
 
         if self.char:
-            countvect_char = CountVectorizer(ngram_range=self.char_range,
-                    analyzer="char", binary=True)
+            countvect_char = TfidfVectorizer(ngram_range=self.char_range,
+                    analyzer="char", binary=False)
             countvect_char.fit(comments)
             self.countvect_char = countvect_char
         return self
@@ -83,7 +149,7 @@ class TextFeatureTransformer(BaseEstimator):
         mean_word_len = [np.mean([len(w) for w in c.split()])
                                             for c in comments]
         # number of google badwords:
-        n_bad = [np.sum([w in c.lower() for w in self.badwords_])
+        n_bad = [np.sum([c.lower().count(w) for w in self.badwords_])
                                                 for c in comments]
         exclamation = [c.count("!") for c in comments]
         addressing = [c.count("@") for c in comments]
