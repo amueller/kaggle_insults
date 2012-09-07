@@ -7,15 +7,11 @@ from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from features import TextFeatureTransformer, DensifyTransformer
+from features import TextFeatureTransformer
 from sklearn.metrics import auc_score
-from sklearn.ensemble import RandomForestClassifier
 #from sklearn.svm import LinearSVC
 import matplotlib.pyplot as plt
 
-#from sklearn.externals.joblib import Memory
-
-#memory = Memory(cachdir="cache")
 
 from time import strftime
 from IPython.core.debugger import Tracer
@@ -98,58 +94,6 @@ def jellyfish():
     print("auc: %f" % auc_score(y_test, probs[:, 1]))
 
 
-def feature_selection_test():
-    from sklearn.feature_selection import RFE
-    comments, dates, labels = load_data()
-    y_train, y_test, comments_train, comments_test = \
-            train_test_split(labels, comments)
-    clf = LogisticRegression(C=1, tol=1e-8)
-    rfe = RFE(clf, step=1, n_features_to_select=12000)
-    ft = TextFeatureTransformer(word_max_n=1).fit(comments_train)
-    X_train = ft.transform(comments_train)
-    rfe.fit(X_train, y_train)
-    X_train_selected = rfe.transform(X_train)
-    X_test = ft.transform(comments_test)
-    X_test_selected = rfe.transform(X_test)
-    clf.fit(X_train_selected, y_train)
-    probs = clf.predict_proba(X_test_selected)
-    print("auc: %f" % auc_score(y_test, probs[:, 1]))
-    tracer()
-
-
-def grid_search_feature_selection():
-    comments, dates, labels = load_data()
-    clf = LogisticRegression(tol=1e-8, C=0.5, penalty='l1')
-    ft = TextFeatureTransformer(char=False, word_max_n=3)
-    print("training and transforming for linear model")
-    #X = ft.fit(comments).transform(comments)
-    #X_ = clf.fit_transform(X, labels).toarray()
-    print("training grid search")
-    rf = RandomForestClassifier(n_estimators=200)
-    dt = DensifyTransformer()
-    pipeline = Pipeline([("features", ft), ("l1select", clf),
-        ("make_dense", dt), ("rf", rf)])
-    #param_grid = dict(features__word_max_n=np.arange(1, 3),
-            #features__char=[True, False],
-            #rf__max_depth=[20, 25, 30, 35],
-            #rf__max_features=['log2', 'sqrt'],
-            #rf__min_samples_leaf=[1],
-            #l1select__C=[0.01, 0.1, 0.2, 0.5, 0.8, 1])
-    param_grid = dict(features__word_max_n=[1],
-            features__char=[False],
-            rf__max_depth=[35, 40],
-            rf__max_features=['log2', 10, 5, 8, 15],
-            rf__min_samples_leaf=[1],
-            l1select__C=[0.8])
-    grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
-            n_jobs=11, score_func=auc_score)
-    grid.fit(comments, labels)
-    tracer()
-    comments_test, dates_test = load_test()
-    prob_pred = grid.best_estimator_.predict_proba(comments_test)
-    write_test(prob_pred[:, 1])
-
-
 def test_bagging():
     comments, dates, labels = load_data()
     comments = np.asarray(comments)
@@ -192,11 +136,13 @@ def grid_search():
     from sklearn.feature_selection import SelectPercentile, chi2
     #import jellyfish as jf
     comments, dates, labels = load_data()
-    param_grid = dict(logr__C=np.arange(5, 20),
-            select__percentile=np.arange(6, 17, 1))
+    #param_grid = dict(logr__C=np.arange(1, 20),
+            #select__percentile=np.arange(2, 17, 1))
     #param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
             #vect__word_range=[(1, 3)], select__percentile=np.arange(1, 70,
                 #5))
+    param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
+            vect__word_range=[(1, 3)])
     #param_grid = dict(logr__C=2. ** np.arange(-6, 0), vect__word_range=[(1, 1),
        #(1, 2), (1, 3), (2, 3), (3, 3)], vect__char_range=[(1, 1), (1, 2), (1,
            #3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5)])
@@ -235,11 +181,11 @@ def grid_search():
     #plt.ylim(0.85, 0.93)
     #plt.savefig("grid_plot_c.png")
     #plt.close()
-    w_mean, w_err = grid.scores_.accumulated('select__percentile')
-    w_values = np.arange(len(grid.scores_.values['select__percentile']))
+    w_mean, w_err = grid.scores_.accumulated('logr__tol')
+    w_values = np.arange(len(grid.scores_.values['logr__tol']))
     plt.errorbar(w_values, w_mean, yerr=w_err)
     plt.ylim(0.85, 0.93)
-    plt.savefig("grid_plot_select.png")
+    plt.savefig("grid_plot_tol.png")
     plt.close()
     tracer()
     comments_test, dates_test = load_test()

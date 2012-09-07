@@ -155,8 +155,8 @@ class TextFeatureTransformer(BaseEstimator):
         addressing = [c.count("@") for c in comments]
         spaces = [c.count(" ") for c in comments]
 
-        allcaps_ratio = np.array(allcaps) / np.array(n_words)
-        bad_ratio = np.array(n_bad) / np.array(n_words)
+        allcaps_ratio = np.array(allcaps) / np.array(n_words, dtype=np.float)
+        bad_ratio = np.array(n_bad) / np.array(n_words, dtype=np.float)
 
         designed = np.array([n_words, n_chars, allcaps, max_word_len,
             mean_word_len, exclamation, addressing, spaces, bad_ratio, n_bad,
