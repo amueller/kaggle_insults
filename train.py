@@ -95,26 +95,6 @@ def jellyfish():
     print("auc: %f" % auc_score(y_test, probs[:, 1]))
 
 
-def feature_selection_test():
-    from sklearn.feature_selection import RFE
-    comments, dates, labels = load_data()
-    y_train, y_test, comments_train, comments_test = \
-            train_test_split(labels, comments)
-    clf = LogisticRegression(C=1, tol=1e-8)
-    select = RFE(clf, step=1, n_features_to_select=120)
-    #select = RandomizedLogisticRegression()
-    ft = TextFeatureTransformer(word_range=(1, 1)).fit(comments_train)
-    X_train = ft.transform(comments_train)
-    select.fit(X_train, y_train)
-    X_train_selected = select.transform(X_train)
-    X_test = ft.transform(comments_test)
-    X_test_selected = select.transform(X_test)
-    clf.fit(X_train_selected, y_train)
-    probs = clf.predict_proba(X_test_selected)
-    print("auc: %f" % auc_score(y_test, probs[:, 1]))
-    tracer()
-
-
 def test_stacker():
     comments, dates, labels = load_data()
     clf = LogisticRegression(tol=1e-8, C=0.01, penalty='l2')
@@ -185,10 +165,13 @@ def grid_search():
     from sklearn.feature_selection import SelectPercentile, chi2
     #import jellyfish as jf
     comments, dates, labels = load_data()
-    param_grid = dict(logr__C=np.arange(5, 20),
-            select__percentile=np.arange(6, 17, 1))
+    #param_grid = dict(logr__C=np.arange(1, 20),
+            #select__percentile=np.arange(2, 17, 1))
     #param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
-            #vect__word_range=[(1, 3)], select__percentile=np.arange(1, 70, 5))
+            #vect__word_range=[(1, 3)], select__percentile=np.arange(1, 70,
+                #5))
+    param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
+            vect__word_range=[(1, 3)])
     #param_grid = dict(logr__C=2. ** np.arange(-6, 0), vect__word_range=[(1, 1),
         #(1, 2), (1, 3), (2, 3), (3, 3)], vect__char_range=[(1, 1), (1, 2), (1,
             #3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5)])
@@ -233,11 +216,11 @@ def grid_search():
     #plt.ylim(0.85, 0.93)
     #plt.savefig("grid_plot_c.png")
     #plt.close()
-    w_mean, w_err = grid.scores_.accumulated('select__percentile')
-    w_values = np.arange(len(grid.scores_.values['select__percentile']))
+    w_mean, w_err = grid.scores_.accumulated('logr__tol')
+    w_values = np.arange(len(grid.scores_.values['logr__tol']))
     plt.errorbar(w_values, w_mean, yerr=w_err)
     plt.ylim(0.85, 0.93)
-    plt.savefig("grid_plot_select.png")
+    plt.savefig("grid_plot_tol.png")
     plt.close()
     tracer()
     comments_test, dates_test = load_test()
