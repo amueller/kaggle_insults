@@ -7,7 +7,8 @@ from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from features import TextFeatureTransformer, BadWordCounter, FeatureStacker
+#from features import TextFeatureTransformer, BadWordCounter, FeatureStacker
+from features import BadWordCounter, FeatureStacker
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import auc_score
 import matplotlib.pyplot as plt
@@ -84,9 +85,16 @@ def jellyfish():
             train_test_split(labels, comments)
     #ft = TextFeatureTransformer(word_range=(1, 1),
             #tokenizer_func=jellyfish.porter_stem).fit(comments_train)
-    ft = TextFeatureTransformer(word_range=(1, 1),
-            tokenizer_func=None).fit(comments_train)
+    #ft = TextFeatureTransformer(word_range=(1, 1),
+            #tokenizer_func=None).fit(comments_train)
     tracer()
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False)
+    badwords = BadWordCounter()
+    ft = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
+        ("words", countvect_word)])
     clf = LogisticRegression(C=1, tol=1e-8)
     X_train = ft.transform(comments_train)
     clf.fit(X_train, y_train)
@@ -96,6 +104,7 @@ def jellyfish():
 
 
 def test_stacker():
+    from sklearn.feature_selection import SelectPercentile, chi2
     comments, dates, labels = load_data()
     clf = LogisticRegression(tol=1e-8, C=0.01, penalty='l2')
     countvect_char = TfidfVectorizer(ngram_range=(1, 5),
@@ -103,16 +112,24 @@ def test_stacker():
     countvect_word = TfidfVectorizer(ngram_range=(1, 3),
             analyzer="word", binary=False)
     badwords = BadWordCounter()
+    select = SelectPercentile(score_func=chi2)
+    char_select = Pipeline([('char_count', countvect_char),
+                            ('select', select)])
+    words_select = Pipeline([('word_count', countvect_word),
+                             ('select', select)])
+    badwords_select = Pipeline([('badwords', badwords), ('select', select)])
 
-    stack = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
-        ("words", countvect_word)])
+    stack = FeatureStacker([("badwords", badwords_select),
+                            ("chars", char_select),
+                            ("words", words_select)])
     #stack.fit(comments)
     #features = stack.transform(comments)
 
     #print("training and transforming for linear model")
     print("training grid search")
     pipeline = Pipeline([("features", stack), ("clf", clf)])
-    param_grid = dict(clf__C=[0.31, 0.42, 0.54])
+    param_grid = dict(clf__C=[0.31, 0.42, 0.54],
+                      features__words__select__percentile=[5, 7])
     grid = GridSearchCV(pipeline, cv=5, param_grid=param_grid, verbose=4,
            n_jobs=1, score_func=auc_score)
     grid.fit(comments, labels)
@@ -122,42 +139,42 @@ def test_stacker():
     #write_test(prob_pred[:, 1])
 
 
-def test_bagging():
-    comments, dates, labels = load_data()
-    comments = np.asarray(comments)
-    cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
-            indices=True)
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=0.5)
-    ft = TextFeatureTransformer(char=True, word=True, designed=True,
-            word_range=(1, 3), char_range=(1, 5))
-    pipeline = Pipeline([('vect', ft), ('logr', clf)])
-    clf2 = LogisticRegression(tol=1e-8, penalty='l2', C=4)
-    ft2 = TextFeatureTransformer(char=True, word=False, designed=True,
-            char_range=(1, 4))
-    pipeline2 = Pipeline([('vect', ft2), ('logr', clf2)])
-    clf3 = LogisticRegression(tol=1e-8, penalty='l2', C=1)
-    ft3 = TextFeatureTransformer(char=False, word=True, designed=True,
-            word_range=(1, 2))
-    pipeline3 = Pipeline([('vect', ft3), ('logr', clf3)])
-    joint = []
-    words = []
-    chars = []
-    combined = []
-    all = []
-    for train, test in cv:
-        X_train, y_train = comments[train], labels[train]
-        X_test, y_test = comments[test], labels[test]
-        pred = pipeline.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        pred2 = pipeline2.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        pred3 = pipeline3.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        joint.append(auc_score(y_test, pred))
-        words.append(auc_score(y_test, pred3))
-        chars.append(auc_score(y_test, pred2))
-        combined.append(auc_score(y_test, pred2 + pred3))
-        all.append(auc_score(y_test, pred2 + pred3 + pred))
-        print("together: %f, first: %f, second:%f, combined: %f all: %f" %
-                (joint[-1], chars[-1], words[-1], combined[-1], all[-1]))
-    tracer()
+#def test_bagging():
+    #comments, dates, labels = load_data()
+    #comments = np.asarray(comments)
+    #cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
+            #indices=True)
+    #clf = LogisticRegression(tol=1e-8, penalty='l2', C=0.5)
+    #ft = TextFeatureTransformer(char=True, word=True, designed=True,
+            #word_range=(1, 3), char_range=(1, 5))
+    #pipeline = Pipeline([('vect', ft), ('logr', clf)])
+    #clf2 = LogisticRegression(tol=1e-8, penalty='l2', C=4)
+    #ft2 = TextFeatureTransformer(char=True, word=False, designed=True,
+            #char_range=(1, 4))
+    #pipeline2 = Pipeline([('vect', ft2), ('logr', clf2)])
+    #clf3 = LogisticRegression(tol=1e-8, penalty='l2', C=1)
+    #ft3 = TextFeatureTransformer(char=False, word=True, designed=True,
+            #word_range=(1, 2))
+    #pipeline3 = Pipeline([('vect', ft3), ('logr', clf3)])
+    #joint = []
+    #words = []
+    #chars = []
+    #combined = []
+    #all = []
+    #for train, test in cv:
+        #X_train, y_train = comments[train], labels[train]
+        #X_test, y_test = comments[test], labels[test]
+        #pred = pipeline.fit(X_train, y_train).predict_proba(X_test)[:, 1]
+        #pred2 = pipeline2.fit(X_train, y_train).predict_proba(X_test)[:, 1]
+        #pred3 = pipeline3.fit(X_train, y_train).predict_proba(X_test)[:, 1]
+        #joint.append(auc_score(y_test, pred))
+        #words.append(auc_score(y_test, pred3))
+        #chars.append(auc_score(y_test, pred2))
+        #combined.append(auc_score(y_test, pred2 + pred3))
+        #all.append(auc_score(y_test, pred2 + pred3 + pred))
+        #print("together: %f, first: %f, second:%f, combined: %f all: %f" %
+                #(joint[-1], chars[-1], words[-1], combined[-1], all[-1]))
+    #tracer()
 
 
 def grid_search():
@@ -182,8 +199,16 @@ def grid_search():
         #(1, 2), (1, 3), (2, 3), (3, 3)], vect__char_range=[(1, 1), (1, 2), (1,
             #3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5)])
     clf = LogisticRegression(tol=1e-8, penalty='l2')
-    ft = TextFeatureTransformer(char=True, word=True, designed=True,
-            char_range=(1, 5), word_range=(1, 3))
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False)
+    badwords = BadWordCounter()
+
+    ft = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
+        ("words", countvect_word)])
+    #ft = TextFeatureTransformer(char=True, word=True, designed=True,
+            #char_range=(1, 5), word_range=(1, 3))
     #select = SelectPercentile(score_func=chi2)
     #pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
     #pipeline = Pipeline([('select', select), ('logr', clf)])
@@ -246,8 +271,16 @@ def analyze_output():
     tracer()
 
     clf = LogisticRegression(tol=1e-8, penalty='l2', C=19)
-    ft = TextFeatureTransformer(char=True, word=False, char_range=(1, 5),
-            word_range=(1, 3)).fit(comments_train)
+    #ft = TextFeatureTransformer(char=True, word=False, char_range=(1, 5),
+            #word_range=(1, 3)).fit(comments_train)
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False)
+    badwords = BadWordCounter()
+
+    ft = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
+        ("words", countvect_word)])
     X_train = ft.transform(comments_train)
     select = SelectPercentile(score_func=chi2, percentile=7)
     X_train_s = select.fit_transform(X_train, y_train)
@@ -289,8 +322,8 @@ def analyze_output():
 
 
 if __name__ == "__main__":
-    grid_search()
+    #grid_search()
     #analyze_output()
-    #test_stacker()
+    test_stacker()
     #feature_selection_test()
     #jellyfish()

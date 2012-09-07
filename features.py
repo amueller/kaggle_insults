@@ -28,7 +28,7 @@ class BadWordCounter(BaseEstimator):
             'capsratio'])
 
     def fit(self, documents, y=None):
-        pass
+        return self
 
     def transform(self, documents):
         ## some handcrafted features!
@@ -83,6 +83,16 @@ class FeatureStacker(BaseEstimator):
         else:
             features = np.hstack(features)
         return features
+
+    def get_params(self, deep=True):
+        if not deep:
+            return super(FeatureStacker, self).get_params(deep=False)
+        else:
+            out = dict(self.transformer_list)
+            for name, trans in self.transformer_list:
+                for key, value in trans.get_params(deep=True).iteritems():
+                    out['%s__%s' % (name, key)] = value
+            return out
 
 
 class TextFeatureTransformer(BaseEstimator):
