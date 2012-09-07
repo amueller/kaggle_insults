@@ -179,6 +179,16 @@ with counting bad words:
 0.91333840187
 {'logr__C': 9, 'select__percentile': 13}
 
+ss20 binary=False, words + char
+0.911491117421
+{'logr__C': 6, 'select__percentile': 7}
+
+0.913358142081
+{'logr__C': 4.0, 'select__percentile': 15}
+
+0.914403292468
+{'logr__C': 5, 'select__percentile': 8}
+
 submission 3: (=1)
 test_prediction_12_12_30
 l2 with features + char

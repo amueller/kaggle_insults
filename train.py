@@ -162,29 +162,36 @@ def test_bagging():
 
 def grid_search():
     #from sklearn.linear_model import SGDClassifier
-    from sklearn.feature_selection import SelectPercentile, chi2
+    #from sklearn.feature_selection import SelectPercentile, chi2
+    from sklearn.feature_selection import RFECV
     #import jellyfish as jf
     comments, dates, labels = load_data()
     #param_grid = dict(logr__C=np.arange(1, 20),
             #select__percentile=np.arange(2, 17, 1))
-    #param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
+    param_grid = dict(estimator_params=[{'C': x}
+                      for x in 2. ** np.arange(-3, 3)])
+    #param_grid = dict(logr__C=2. ** np.arange(0, 8),
+        #vect__char_range=[(1, 5)],
             #vect__word_range=[(1, 3)], select__percentile=np.arange(1, 70,
                 #5))
-    param_grid = dict(logr__C=2. ** np.arange(0, 8), vect__char_range=[(1, 5)],
-            vect__word_range=[(1, 3)])
-    #param_grid = dict(logr__C=2. ** np.arange(-6, 0), vect__word_range=[(1, 1),
+    #param_grid = dict(logr__C=2. ** np.arange(0, 8),
+    #vect__char_range=[(1, 5)],
+            #vect__word_range=[(1, 3)])
+    #param_grid = dict(logr__C=2. ** np.arange(-6, 0),
+    #vect__word_range=[(1, 1),
         #(1, 2), (1, 3), (2, 3), (3, 3)], vect__char_range=[(1, 1), (1, 2), (1,
             #3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5)])
     clf = LogisticRegression(tol=1e-8, penalty='l2')
     ft = TextFeatureTransformer(char=True, word=True, designed=True,
             char_range=(1, 5), word_range=(1, 3))
-    select = SelectPercentile(score_func=chi2)
+    #select = SelectPercentile(score_func=chi2)
     #pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
-    pipeline = Pipeline([('select', select), ('logr', clf)])
+    #pipeline = Pipeline([('select', select), ('logr', clf)])
     #pipeline = Pipeline([('vect', ft), ('logr', clf)])
+    pipeline = RFECV(estimator=clf, step=0.01, verbose=10, cv=5)
     cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2)
     grid = GridSearchCV(pipeline, cv=cv, param_grid=param_grid, verbose=4,
-            n_jobs=12, score_func=auc_score)
+            n_jobs=1, score_func=auc_score)
     X = ft.fit(comments).transform(comments)
     grid.fit(X, labels)
     print(grid.best_score_)
@@ -230,11 +237,15 @@ def grid_search():
 
 def analyze_output():
     from sklearn.feature_selection import SelectPercentile, chi2
+    #from features import BadWordCounter
     comments, dates, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
             train_test_split(labels, comments)
+    #bad = BadWordCounter()
+    #custom = bad.transform(comments_train)
+    tracer()
 
-    clf = LogisticRegression(tol=0.01, penalty='l2', C=19)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=19)
     ft = TextFeatureTransformer(char=True, word=False, char_range=(1, 5),
             word_range=(1, 3)).fit(comments_train)
     X_train = ft.transform(comments_train)
@@ -278,8 +289,8 @@ def analyze_output():
 
 
 if __name__ == "__main__":
-    #grid_search()
-    analyze_output()
+    grid_search()
+    #analyze_output()
     #test_stacker()
     #feature_selection_test()
     #jellyfish()

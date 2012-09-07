@@ -23,9 +23,9 @@ class BadWordCounter(BaseEstimator):
         self.badwords_ = badwords
 
     def get_feature_names(self):
-        return ['n_words', 'n_chars', 'allcaps', 'max_len',
+        return np.array(['n_words', 'n_chars', 'allcaps', 'max_len',
             'mean_len', '@', '!', 'spaces', 'bad_ratio', 'n_bad',
-            'capsratio']
+            'capsratio'])
 
     def fit(self, documents, y=None):
         pass
@@ -49,8 +49,8 @@ class BadWordCounter(BaseEstimator):
         addressing = [c.count("@") for c in documents]
         spaces = [c.count(" ") for c in documents]
 
-        allcaps_ratio = np.array(allcaps) / np.array(n_words)
-        bad_ratio = np.array(n_bad) / np.array(n_words)
+        allcaps_ratio = np.array(allcaps) / np.array(n_words, dtype=np.float)
+        bad_ratio = np.array(n_bad) / np.array(n_words, dtype=np.float)
 
         return np.array([n_words, n_chars, allcaps, max_word_len,
             mean_word_len, exclamation, addressing, spaces, bad_ratio, n_bad,
