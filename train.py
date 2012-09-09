@@ -141,42 +141,6 @@ def test_stacker():
     #write_test(prob_pred[:, 1])
 
 
-#def test_bagging():
-    #comments, dates, labels = load_data()
-    #comments = np.asarray(comments)
-    #cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
-            #indices=True)
-    #clf = LogisticRegression(tol=1e-8, penalty='l2', C=0.5)
-    #ft = TextFeatureTransformer(char=True, word=True, designed=True,
-            #word_range=(1, 3), char_range=(1, 5))
-    #pipeline = Pipeline([('vect', ft), ('logr', clf)])
-    #clf2 = LogisticRegression(tol=1e-8, penalty='l2', C=4)
-    #ft2 = TextFeatureTransformer(char=True, word=False, designed=True,
-            #char_range=(1, 4))
-    #pipeline2 = Pipeline([('vect', ft2), ('logr', clf2)])
-    #clf3 = LogisticRegression(tol=1e-8, penalty='l2', C=1)
-    #ft3 = TextFeatureTransformer(char=False, word=True, designed=True,
-            #word_range=(1, 2))
-    #pipeline3 = Pipeline([('vect', ft3), ('logr', clf3)])
-    #joint = []
-    #words = []
-    #chars = []
-    #combined = []
-    #all = []
-    #for train, test in cv:
-        #X_train, y_train = comments[train], labels[train]
-        #X_test, y_test = comments[test], labels[test]
-        #pred = pipeline.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        #pred2 = pipeline2.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        #pred3 = pipeline3.fit(X_train, y_train).predict_proba(X_test)[:, 1]
-        #joint.append(auc_score(y_test, pred))
-        #words.append(auc_score(y_test, pred3))
-        #chars.append(auc_score(y_test, pred2))
-        #combined.append(auc_score(y_test, pred2 + pred3))
-        #all.append(auc_score(y_test, pred2 + pred3 + pred))
-        #print("together: %f, first: %f, second:%f, combined: %f all: %f" %
-                #(joint[-1], chars[-1], words[-1], combined[-1], all[-1]))
-    #tracer()
 
 
 def grid_search():
