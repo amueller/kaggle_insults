@@ -41,6 +41,7 @@ def load_data():
             comments.append(comment)
     labels = np.array(labels, dtype=np.int)
     dates = np.array(dates)
+    comments = np.array(comments)
     return comments, dates, labels
 
 
@@ -62,6 +63,7 @@ def load_test():
             comment = comment.decode('unicode-escape')
             comments.append(comment)
     dates = np.array(dates)
+    comments = np.array(comments)
     return comments, dates
 
 
