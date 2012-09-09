@@ -141,6 +141,40 @@ def test_stacker():
     #write_test(prob_pred[:, 1])
 
 
+def simple_model():
+    from sklearn.feature_selection import SelectPercentile, chi2
+    #from sklearn.preprocessing import MinMaxScaler
+
+    comments, dates, labels = load_data()
+    select = SelectPercentile(score_func=chi2, percentile=16)
+
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=4)
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False)
+    badwords = BadWordCounter()
+    #scaler = MinMaxScaler()
+    #bad_pip = Pipeline([("bad", badwords), ("scaler", scaler)])
+
+    ft = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
+        ("words", countvect_word)])
+
+    pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
+
+    cv = ShuffleSplit(len(comments), n_iterations=5, test_size=0.2,
+            indices=True)
+    scores = []
+    for train, test in cv:
+        X_train, y_train = comments[train], labels[train]
+        X_test, y_test = comments[test], labels[test]
+        pipeline.fit(X_train, y_train)
+        probs = pipeline.predict_proba(X_test)
+        scores.append(auc_score(y_test, probs[:, 1]))
+        print("score: %f" % scores[-1])
+    print(np.mean(scores), np.std(scores))
+
+    tracer()
 
 
 def grid_search():
