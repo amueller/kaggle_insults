@@ -3,6 +3,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 #from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cross_validation import train_test_split, ShuffleSplit
+from sklearn.base import BaseEstimator, clone
 from sklearn.grid_search import GridSearchCV
 #from sklearn.cross_validation import cross_val_score
 from sklearn.linear_model import LogisticRegression
@@ -18,6 +19,31 @@ from IPython.core.debugger import Tracer
 
 
 tracer = Tracer()
+
+
+class BaggingClassifier(BaseEstimator):
+    def __init__(self, estimator, n_estimators=10):
+        self.estimator = estimator
+        self.n_estimators = n_estimators
+
+    def fit(self, X, y):
+        self.estimators = []
+        cv = ShuffleSplit(X.shape[0], n_iterations=self.n_estimators,
+                test_size=0.3, indices=True)
+        for train, test in cv:
+            est = clone(self.estimator)
+            est.fit(X[train], y[train])
+            self.estimators.append(est)
+        return self
+
+    def predict(self, X):
+        return np.argmax(self.predict_proba(X), axis=1)
+
+    def predict_proba(self, X):
+        probs = np.zeros((X.shape[0], 2))
+        for est in self.estimators:
+            probs += est.predict_proba(X)
+        return probs / self.n_estimators
 
 
 def load_data():
@@ -139,6 +165,40 @@ def test_stacker():
     #comments_test, dates_test = load_test()
     #prob_pred = grid.best_estimator_.predict_proba(comments_test)
     #write_test(prob_pred[:, 1])
+
+
+def bagging():
+    from sklearn.feature_selection import SelectPercentile, chi2
+
+    comments, dates, labels = load_data()
+    select = SelectPercentile(score_func=chi2, percentile=8)
+
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=5)
+    #clf = BaggingClassifier(logr, n_estimators=50)
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False)
+    badwords = BadWordCounter()
+
+    ft = FeatureStacker([("badwords", badwords), ("chars", countvect_char),
+        ("words", countvect_word)])
+    #ft = TextFeatureTransformer()
+    pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
+
+    cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
+            indices=True)
+    scores = []
+    for train, test in cv:
+        X_train, y_train = comments[train], labels[train]
+        X_test, y_test = comments[test], labels[test]
+        pipeline.fit(X_train, y_train)
+        probs = pipeline.predict_proba(X_test)
+        scores.append(auc_score(y_test, probs[:, 1]))
+        print("score: %f" % scores[-1])
+    print(np.mean(scores), np.std(scores))
+
+    tracer()
 
 
 def simple_model():
