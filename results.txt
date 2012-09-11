@@ -190,10 +190,36 @@ ss20 binary=False, words + char
 {'logr__C': 5, 'select__percentile': 8}
 
 
+ss 20, tfidf, binary=False, no scaling of designed features
+0.912261756081
+{'logr__C': 7, 'select__percentile': 2}
+
+with scaling of features:
+0.912951813566
+{'logr__C': 3, 'select__percentile': 10}
+
+
 l1 select: ss5
 char+words+designed, (1, 5), (1, 3)
 0.897332385116
 {'logr__C': 4.0, 'select__C': 8.0}
+
+no select ss50:
+0.903399470341
+{'logr__C': 5}
+
+min_df ss10
+0.917669556837
+{'logr__C': 2, 'select__percentile': 14, 'vect__words__min_df': 3}
+
+ss10 new feature extraction. only words 
+0.893394841981
+{'C': 4}
+
+elasticnet: no select
+0.906497374319
+{'logr__alpha': 0.0001220703125, 'logr__rho': 0.8, 'logr__n_iter': 5}
+
 
 
 submission 3: (=1)
