@@ -215,10 +215,23 @@ min_df ss10
 ss10 new feature extraction. only words 
 0.893394841981
 {'C': 4}
+ne features, only words and stuff
+0.903229621733
+{'select__percentile': 16}
+
 
 elasticnet: no select
 0.906497374319
 {'logr__alpha': 0.0001220703125, 'logr__rho': 0.8, 'logr__n_iter': 5}
+0.912700394265
+{'logr__alpha': 0.0001, 'logr__rho': 1, 'logr__n_iter': 11}
+0.912545571475
+{'logr__alpha': 0.0001, 'logr__rho': 0.94999999999999996, 'logr__n_iter': 21}
+
+select percentile
+0.914085740028
+{'logr__alpha': 6.103515625e-05, 'select__percentile': 11}
+
 
 
 

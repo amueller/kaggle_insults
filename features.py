@@ -5,7 +5,7 @@ import re
 import nltk
 import nltk.collocations as col
 import enchant
-from sklearn.feature_selection import SelectPercentile, chi2
+#from sklearn.feature_selection import SelectPercentile, chi2
 
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -138,26 +138,27 @@ class TextFeatureTransformer(BaseEstimator):
         feature_names.extend(self.bigram_vect_you.get_feature_names())
         feature_names.extend(self.trigram_vect_you.get_feature_names())
         feature_names.extend(self.pos_vect.get_feature_names())
-        feature_names.extend(['n_nicks', 'n_sentences', 'n_urls', 'n_words',
-            'n_chars', 'toolong', 'allcaps', 'max_len', 'mean_len', 'dots',
-            '!', '?', 'spaces', 'bad_ratio', 'n_bad', 'capsratio'])
+        feature_names.extend(["n_nicks", "n_urls", "n_sentences",
+            "n_non_words", "idiot", "moron"])
+        feature_names.extend(['n_words', 'n_chars', 'toolong', 'allcaps',
+            'max_len', 'mean_len', 'dots', '!', '?', 'spaces', 'bad_ratio',
+            'n_bad', 'capsratio'])
         feature_names = [" ".join(w) if isinstance(w, tuple) else w
                             for w in feature_names]
         return np.array(feature_names)
 
-    def fit(self, comments, y):
+    def fit(self, comments, y=None):
         self.d = enchant.Dict("en_US")
         with open("my_badlist2.txt") as f:
             badwords = [l.strip() for l in f.readlines()]
         self.badwords_ = badwords
-        n_nicks, n_urls, n_sentences, n_non_words, \
-                flat_words_lower, filtered_words, tags = \
+        designed_features, flat_words_lower, filtered_words, tags = \
                 self._preprocess(comments)
 
         empty_analyzer = lambda x: x
         self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3)
         print("vecorizing")
-        unigram_bow = self.unigram_vect.fit_transform(flat_words_lower)
+        self.unigram_vect.fit(flat_words_lower)
 
         # pos tag vectorizer
         self.pos_vect = TfidfVectorizer(analyzer=empty_analyzer).fit(tags)
@@ -211,8 +212,12 @@ class TextFeatureTransformer(BaseEstimator):
         comments_nourl = [url.sub('', c) for c in comments_nonick]
         comments_ascii = [c.replace(u'\xa0', ' ') for c in comments_nourl]
         comments_ascii = [remove_non_ascii(c) for c in comments_ascii]
-        ur = "you are"
-        comments_ascii = [re.sub(ur"you'? ?re?", ur, c)
+        ur = "you are "
+        comments_ascii = [re.sub(ur"you'? ?a?re ", ur, c)
+                for c in comments_ascii]
+        idiot = [len(re.findall("you.? [\w ]* idi.t", c))
+                for c in comments_ascii]
+        moron = [len(re.findall("you.? [\w ]* m.r.n", c))
                 for c in comments_ascii]
         # split into sentences
         sentences = [nltk.sent_tokenize(comment)
@@ -225,10 +230,11 @@ class TextFeatureTransformer(BaseEstimator):
         n_sentences = [len(sent) for sent in sentences]
         words = [[nltk.word_tokenize(s) for s in sent] for sent in sentences]
         tagged = [[nltk.pos_tag(s) for s in comment] for comment in words]
-        tags = [[tag[1] for sent in comment for tag in sent] for comment in tagged]
+        tags = [[tag[1] for sent in comment for tag in sent]
+                for comment in tagged]
         # remove ' <- this thing
-        words = [[[w.strip("'") for w in s if w.strip("'")] for s in sent] for sent in
-                words]
+        words = [[[w.strip("'") for w in s if w.strip("'")] for s in sent]
+                for sent in words]
         filtered_words = [[w for sent in sents for w in sent
            if not w in punctuation]
            for sents in words]
@@ -246,12 +252,12 @@ class TextFeatureTransformer(BaseEstimator):
         #bla, blub = np.unique(flat, return_inverse=True)
         # not words, only there once. we could try and guess?
         #to_replace = bla[np.bincount(blub) == 1].tolist()
-        return [n_nicks, n_urls, n_sentences, n_non_words, flat_words_lower,
+        features = [n_nicks, n_urls, n_sentences, n_non_words, idiot, moron]
+        return [features, flat_words_lower,
                 filtered_words, tags]
 
     def transform(self, comments):
-        n_nicks, n_urls, n_sentences, n_non_words,\
-                flat_words_lower, filtered_words, tags = \
+        designed, flat_words_lower, filtered_words, tags = \
                 self._preprocess(comments)
 
         # get started with real features:
@@ -278,8 +284,9 @@ class TextFeatureTransformer(BaseEstimator):
 
         # number of google badwords:
         # also take plurals
-        n_bad = [np.sum([c.count(w) + c.count(w + "s") for w in self.badwords_])
-                if len(c) else 0 for c in flat_words_lower]
+        n_bad = [np.sum([c.count(w) + c.count(w + "s")
+                 for w in self.badwords_])
+                 if len(c) else 0 for c in flat_words_lower]
         exclamation = [c.count("!") for c in comments]
         question = [c.count("?") for c in comments]
         spaces = [c.count(" ") for c in comments]
@@ -290,15 +297,15 @@ class TextFeatureTransformer(BaseEstimator):
                 / (np.array(n_words, dtype=np.float) + 0.1))
         bad_ratio = np.array(n_bad) / (np.array(n_words, dtype=np.float) + 0.1)
 
-        designed = np.array([n_nicks, n_sentences, n_urls, n_words, n_chars,
+        designed.extend([n_words, n_chars,
             allcaps, too_long, max_word_len, mean_word_len, dots, exclamation,
-            question, spaces, bad_ratio, n_bad, allcaps_ratio,
-            n_non_words]).T
+            question, spaces, bad_ratio, n_bad, allcaps_ratio])
+        designed = np.array(designed).T
 
         features = []
-        features.append(self.uni_select.transform(unigrams))
-        features.append(self.bi_select.transform(you_bigrams))
-        features.append(self.tri_select.transform(you_trigrams))
+        features.append(unigrams)
+        features.append(you_bigrams)
+        features.append(you_trigrams)
         features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
         features = sparse.hstack(features)
