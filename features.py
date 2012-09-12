@@ -130,7 +130,10 @@ def make_collocation_analyzer(collocations, length=2):
 
 class TextFeatureTransformer(BaseEstimator):
     def __init__(self):
-        pass
+        self.d = enchant.Dict("en_US")
+        with open("my_badlist2.txt") as f:
+            badwords = [l.strip() for l in f.readlines()]
+        self.badwords_ = badwords
 
     def get_feature_names(self):
         feature_names = []
@@ -148,10 +151,6 @@ class TextFeatureTransformer(BaseEstimator):
         return np.array(feature_names)
 
     def fit(self, comments, y=None):
-        self.d = enchant.Dict("en_US")
-        with open("my_badlist2.txt") as f:
-            badwords = [l.strip() for l in f.readlines()]
-        self.badwords_ = badwords
         designed_features, flat_words_lower, filtered_words, tags = \
                 self._preprocess(comments)
 
