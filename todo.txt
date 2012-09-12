@@ -1,0 +1,55 @@
+#feature selection for words and chars separately - too high variance?
+#randomized l1 - takes long, could work 
+#rfe takes long, could word 
+#scaling of hand-crafted features - doesn't really make a difference
+
+# averaging multiple classifiers - no effect?
+
+# kernels! chi2, intersection, cosin - can't get SVC to work - normalization?
+
+n_sentence long -> no insult!
+
+feature: number of unknown words
+
+sentiment analysis features
+jellyfish features
+pca / kmenas features
+POS x word features
+elastic net
+stemmer
+
+"you are" feature / regexp
+collocations
+
+
+not replacing "_" and "." in training set: 1% difference!
+feature: ratio of punctuation characters!
+
+
+jerk?
+fuckstick not detected
+idi0t
+LOL?
+dumb-ass)
+so you dumbphuck retard sh!te kunthead,son of your phucking WHORe momma knows everything huh???you dumb phuckface???????????????????????????????'
+
+collocations involving "you"
+
+gay_pusssy...fly
+
+
+more regexp?
+html removal!
+
+5 final submissions:
+1) words, chars,  chi2 univariate selection
+2) chars,  chi2 univariate selection
+3) separate selection
+4) new feature selection
+5) pos? black magic
+
+
+====================================
+tokenizer: you are a !!!!!
+
+you re the not found?!
