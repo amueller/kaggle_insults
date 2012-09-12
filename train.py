@@ -78,13 +78,13 @@ def eval_model():
 
 def grid_search():
     comments, labels = load_data()
-    param_grid = dict(logr__C=np.arange(1, 20),
-            select__percentile=np.arange(2, 17, 1))
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=2)
+    param_grid = dict(logr__C=np.arange(1, 25, 4),
+            select__percentile=np.arange(2, 17, 4))
+    clf = build_base_model()
 
     cv = ShuffleSplit(len(comments), n_iterations=10, test_size=0.2)
     grid = GridSearchCV(clf, cv=cv, param_grid=param_grid, verbose=4,
-            n_jobs=1, score_func=auc_score)
+            n_jobs=12, score_func=auc_score)
     grid.fit(comments, labels)
     print(grid.best_score_)
     print(grid.best_params_)
@@ -165,7 +165,7 @@ def explore_features():
 
 
 if __name__ == "__main__":
-    #grid_search()
-    eval_model()
+    grid_search()
+    #eval_model()
     #analyze_output()
     #explore_features()
