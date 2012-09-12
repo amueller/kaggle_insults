@@ -1,5 +1,8 @@
 import numpy as np
 from time import strftime
+from IPython.core.debugger import Tracer
+
+tracer = Tracer()
 
 
 def load_data():
@@ -15,10 +18,11 @@ def load_data():
             splitstring = line.split(',')
             labels.append(splitstring[0])
             dates.append(splitstring[1][:-1])
+            # the remaining commata where in the text, replace them
             comment = ",".join(splitstring[2:])
             comment = comment.strip().strip('"')
-            comment.replace('_', ' ')
-            #comment.replace('.', ' ')
+            comment = comment.replace('_', ' ')
+            comment = comment.replace('.', ' ')
             comment = comment.replace("\\\\", "\\")
             comment = comment.decode('unicode-escape')
             comments.append(comment)
@@ -40,8 +44,8 @@ def load_test():
             dates.append(splitstring[0][:-1])
             comment = ",".join(splitstring[1:])
             comment = comment.strip().strip('"')
-            comment.replace('_', ' ')
-            #comment.replace('.', ' ')
+            comment = comment.replace('_', ' ')
+            comment = comment.replace('.', ' ')
             comment = comment.replace("\\\\", "\\")
             comment = comment.decode('unicode-escape')
             comments.append(comment)
