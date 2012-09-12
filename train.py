@@ -10,12 +10,12 @@ from sklearn.metrics import auc_score
 import matplotlib.pyplot as plt
 
 from models import build_base_model
-from models import build_elasticnet_model
-from models import build_stacked_model
-from models import build_nltk_model
+#from models import build_elasticnet_model
+#from models import build_stacked_model
+#from models import build_nltk_model
 
 
-from util import load_data, write_test, load_test
+from util import load_data, load_extended_data, write_test, load_test
 
 from IPython.core.debugger import Tracer
 
@@ -49,14 +49,15 @@ class BaggingClassifier(BaseEstimator):
 
 
 def eval_model():
-    comments, dates, labels = load_data()
+    comments, labels = load_extended_data()
 
     clf1 = build_base_model()
-    clf2 = build_elasticnet_model()
-    clf3 = build_stacked_model()
-    clf4 = build_nltk_model()
-    models = [clf1, clf2, clf3, clf4]
-    cv = ShuffleSplit(len(comments), n_iterations=5, test_size=0.2,
+    #clf2 = build_elasticnet_model()
+    #clf3 = build_stacked_model()
+    #clf4 = build_nltk_model()
+    #models = [clf1, clf2, clf3, clf4]
+    models = [clf1]
+    cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
             indices=True)
     scores = []
     for train, test in cv:
@@ -76,7 +77,7 @@ def eval_model():
 
 
 def grid_search():
-    comments, dates, labels = load_data()
+    comments, labels = load_data()
     param_grid = dict(logr__C=np.arange(1, 20),
             select__percentile=np.arange(2, 17, 1))
     clf = LogisticRegression(tol=1e-8, penalty='l2', C=2)
@@ -91,7 +92,7 @@ def grid_search():
     tracer()
     cv_scores = grid.scores_
     for param in zip(cv_scores.params):
-        means, errors = cv_scores.accumulate(param, 'max')
+        means, errors = cv_scores.accumulated(param, 'max')
         plt.errorbar(cv_scores.values[param], means, yerr=errors)
         plt.set_xlabel(param)
         plt.set_ylim(0.6, 0.95)
@@ -115,8 +116,9 @@ def analyze_output():
     X_train = ft.transform(comments_train)
     #select = SelectPercentile(score_func=chi2, percentile=7)
     #X_train_s = select.fit_transform(X_train, y_train)
-    clf.fit(X_train, y_train)
     X_test = ft.transform(comments_test)
+    tracer()
+    clf.fit(X_train, y_train)
     #X_test_s = select.transform(X_test)
     probs = clf.predict_proba(X_test)
     pred = clf.predict(X_test)
@@ -154,9 +156,9 @@ def analyze_output():
 
 
 def explore_features():
-    comments, dates, labels = load_data()
+    comments, labels = load_extended_data()
     ft = TextFeatureTransformer()
-    features, flat_words_lower, filtered_words, tags = \
+    features, flat_words_lower, filtered_words = \
             ft._preprocess(comments)
     asdf = [" ".join(w) for w in filtered_words]
     np.savetxt("filtered.txt", asdf, fmt="%s")

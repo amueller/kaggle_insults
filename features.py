@@ -19,17 +19,6 @@ def remove_non_ascii(s):
     return "".join(i for i in s if ord(i) < 128)
 
 
-def build_tokenizer(func):
-    regexp = re.compile(ur"\b\w\w+\b")
-    tokenizer = lambda doc: [func(word) for word in
-            regexp.findall(doc)]
-    return tokenizer
-
-
-def pos_tokenizer(doc):
-    pass
-
-
 class DensifyTransformer(BaseEstimator):
     def fit(self, X, y=None):
         return self
@@ -140,9 +129,9 @@ class TextFeatureTransformer(BaseEstimator):
         feature_names.extend(self.unigram_vect.get_feature_names())
         feature_names.extend(self.bigram_vect_you.get_feature_names())
         feature_names.extend(self.trigram_vect_you.get_feature_names())
-        feature_names.extend(self.pos_vect.get_feature_names())
+        #feature_names.extend(self.pos_vect.get_feature_names())
         feature_names.extend(["n_nicks", "n_urls", "n_sentences",
-            "n_non_words", "idiot", "moron"])
+            "n_non_words", "idiot", "moron", "n_html"])
         feature_names.extend(['n_words', 'n_chars', 'toolong', 'allcaps',
             'max_len', 'mean_len', 'dots', '!', '?', 'spaces', 'bad_ratio',
             'n_bad', 'capsratio'])
@@ -151,7 +140,7 @@ class TextFeatureTransformer(BaseEstimator):
         return np.array(feature_names)
 
     def fit(self, comments, y=None):
-        designed_features, flat_words_lower, filtered_words, tags = \
+        designed_features, flat_words_lower, filtered_words = \
                 self._preprocess(comments)
 
         empty_analyzer = lambda x: x
@@ -160,7 +149,7 @@ class TextFeatureTransformer(BaseEstimator):
         self.unigram_vect.fit(flat_words_lower)
 
         # pos tag vectorizer
-        self.pos_vect = TfidfVectorizer(analyzer=empty_analyzer).fit(tags)
+        #self.pos_vect = TfidfVectorizer(analyzer=empty_analyzer).fit(tags)
 
         # get the google bad word list
         #with open("google_badlist.txt") as f:
@@ -200,15 +189,18 @@ class TextFeatureTransformer(BaseEstimator):
         return self
 
     def _preprocess(self, comments):
-        # remove nicknames:
+        # remove nicknames, urls, html
         nick = re.compile(ur"@\w\w+:?")
         url = re.compile(ur"http[^\s]*")
+        html = re.compile(ur"</?\w+[^>]*>")
+        n_html = [len(html.findall(c)) for c in comments]
+        comments = [html.sub(' ', c) for c in comments]
 
         n_nicks = [len(nick.findall(c)) for c in comments]
         comments_nonick = [nick.sub('', c) for c in comments]
 
         n_urls = [len(url.findall(c)) for c in comments_nonick]
-        comments_nourl = [url.sub('', c) for c in comments_nonick]
+        comments_nourl = [url.sub(' ', c) for c in comments_nonick]
         comments_ascii = [c.replace(u'\xa0', ' ') for c in comments_nourl]
         comments_ascii = [remove_non_ascii(c) for c in comments_ascii]
         ur = "you are "
@@ -228,9 +220,9 @@ class TextFeatureTransformer(BaseEstimator):
             ['...', '.', '?', '!', ',', "''", '``', '#', '$', "'", "%", "&"]
         n_sentences = [len(sent) for sent in sentences]
         words = [[nltk.word_tokenize(s) for s in sent] for sent in sentences]
-        tagged = [[nltk.pos_tag(s) for s in comment] for comment in words]
-        tags = [[tag[1] for sent in comment for tag in sent]
-                for comment in tagged]
+        #tagged = [[nltk.pos_tag(s) for s in comment] for comment in words]
+        #tags = [[tag[1] for sent in comment for tag in sent]
+                #for comment in tagged]
         # remove ' <- this thing
         words = [[[w.strip("'") for w in s if w.strip("'")] for s in sent]
                 for sent in words]
@@ -251,19 +243,20 @@ class TextFeatureTransformer(BaseEstimator):
         #bla, blub = np.unique(flat, return_inverse=True)
         # not words, only there once. we could try and guess?
         #to_replace = bla[np.bincount(blub) == 1].tolist()
-        features = [n_nicks, n_urls, n_sentences, n_non_words, idiot, moron]
+        features = [n_nicks, n_urls, n_sentences, n_non_words, idiot, moron,
+                n_html]
         return [features, flat_words_lower,
-                filtered_words, tags]
+                filtered_words]
 
     def transform(self, comments):
-        designed, flat_words_lower, filtered_words, tags = \
+        designed, flat_words_lower, filtered_words = \
                 self._preprocess(comments)
 
         # get started with real features:
         unigrams = self.unigram_vect.transform(flat_words_lower)
         you_bigrams = self.bigram_vect_you.transform(flat_words_lower)
         you_trigrams = self.trigram_vect_you.transform(flat_words_lower)
-        pos_unigrams = self.pos_vect.transform(tags)
+        #pos_unigrams = self.pos_vect.transform(tags)
 
         ## some handcrafted features!
         n_words = [len(c) for c in filtered_words]
@@ -305,7 +298,7 @@ class TextFeatureTransformer(BaseEstimator):
         features.append(unigrams)
         features.append(you_bigrams)
         features.append(you_trigrams)
-        features.append(pos_unigrams)
+        #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
         features = sparse.hstack(features)
 
