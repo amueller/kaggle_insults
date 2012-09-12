@@ -22,6 +22,25 @@ def build_stacked_model():
     return pipeline
 
 
+def build_individual_selected_model():
+    select = SelectPercentile(score_func=chi2, percentile=10)
+
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=4)
+    countvect_char = TfidfVectorizer(ngram_range=(1, 5),
+            analyzer="char", binary=False)
+    countvect_word = TfidfVectorizer(ngram_range=(1, 3),
+            analyzer="word", binary=False, min_df=3)
+    badwords = BadWordCounter()
+    select_words = Pipeline([("words", countvect_word), ("select", select)])
+    select_bad = Pipeline([("bad", badwords), ("select", select)])
+    select_chars = Pipeline([("chars", countvect_char), ("select", select)])
+
+    ft = FeatureStacker([("badwords", select_bad), ("chars", select_chars),
+        ("words", select_words)])
+    pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
+    return pipeline
+
+
 def build_elasticnet_model():
     select = SelectPercentile(score_func=chi2, percentile=16)
 
