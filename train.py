@@ -5,15 +5,13 @@ from sklearn.cross_validation import train_test_split, ShuffleSplit
 from sklearn.base import BaseEstimator, clone
 from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
-#from features import TextFeatureTransformer, BadWordCounter, FeatureStacker
 from features import TextFeatureTransformer
-#from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import auc_score
 import matplotlib.pyplot as plt
 
-#from models import build_base_model
-#from models import build_elasticnet_model
-#from models import build_stacked_model
+from models import build_base_model
+from models import build_elasticnet_model
+from models import build_stacked_model
 from models import build_nltk_model
 
 
@@ -53,23 +51,28 @@ class BaggingClassifier(BaseEstimator):
 def eval_model():
     comments, dates, labels = load_data()
 
-    #clf = build_base_model()
-    #clf = build_elasticnet_model()
-    #clf = build_stacked_model()
-    clf = build_nltk_model()
+    clf1 = build_base_model()
+    clf2 = build_elasticnet_model()
+    clf3 = build_stacked_model()
+    clf4 = build_nltk_model()
+    models = [clf1, clf2, clf3, clf4]
     cv = ShuffleSplit(len(comments), n_iterations=5, test_size=0.2,
             indices=True)
     scores = []
     for train, test in cv:
-        X_train, y_train = comments[train], labels[train]
-        X_test, y_test = comments[test], labels[test]
-        clf.fit(X_train, y_train)
-        probs = clf.predict_proba(X_test)
-        scores.append(auc_score(y_test, probs[:, 1]))
-        print("score: %f" % scores[-1])
-    print(np.mean(scores), np.std(scores))
+        probs_common = np.zeros((len(test), 2))
+        for clf in models:
+            X_train, y_train = comments[train], labels[train]
+            X_test, y_test = comments[test], labels[test]
+            clf.fit(X_train, y_train)
+            probs = clf.predict_proba(X_test)
+            print("score: %f" % auc_score(y_test, probs[:, 1]))
+            probs_common += probs
+        probs_common /= 4.
+        scores.append(auc_score(y_test, probs_common[:, 1]))
+        print("combined score: %f" % scores[-1])
 
-    tracer()
+    print(np.mean(scores), np.std(scores))
 
 
 def grid_search():
@@ -150,7 +153,17 @@ def analyze_output():
     tracer()
 
 
+def explore_features():
+    comments, dates, labels = load_data()
+    ft = TextFeatureTransformer()
+    features, flat_words_lower, filtered_words, tags = \
+            ft._preprocess(comments)
+    asdf = [" ".join(w) for w in filtered_words]
+    np.savetxt("filtered.txt", asdf, fmt="%s")
+
+
 if __name__ == "__main__":
     #grid_search()
     eval_model()
     #analyze_output()
+    #explore_features()
