@@ -12,10 +12,12 @@ import matplotlib.pyplot as plt
 from models import build_base_model
 #from models import build_elasticnet_model
 #from models import build_stacked_model
-#from models import build_nltk_model
+from models import build_nltk_model
+#from sklearn.feature_selection import SelectPercentile, chi2
 
 
-from util import load_data, load_extended_data, write_test, load_test
+from util import load_data, load_extended_data, write_test, load_test, \
+        load_subjectivity
 
 from IPython.core.debugger import Tracer
 
@@ -78,9 +80,8 @@ def eval_model():
 
 def grid_search():
     comments, labels = load_data()
-    param_grid = dict(logr__C=np.arange(1, 25, 4),
-            select__percentile=np.arange(2, 17, 4))
-    clf = build_base_model()
+    param_grid = dict(logr__C=np.arange(1, 20, 5))
+    clf = build_nltk_model()
 
     cv = ShuffleSplit(len(comments), n_iterations=10, test_size=0.2)
     grid = GridSearchCV(clf, cv=cv, param_grid=param_grid, verbose=4,
@@ -105,30 +106,36 @@ def grid_search():
 
 
 def analyze_output():
-    comments, dates, labels = load_data()
+    comments, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
-            train_test_split(labels, comments)
+            train_test_split(labels, comments, random_state=0)
+    #from sklearn.tree import DecisionTreeClassifier
     #bad = BadWordCounter()
     #custom = bad.transform(comments_train)
 
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=4)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=.5)
+    #clf = DecisionTreeClassifier(compute_importances=True,min_samples_leaf=10)
     ft = TextFeatureTransformer().fit(comments_train, y_train)
     X_train = ft.transform(comments_train)
     #select = SelectPercentile(score_func=chi2, percentile=7)
     #X_train_s = select.fit_transform(X_train, y_train)
     X_test = ft.transform(comments_test)
-    tracer()
     clf.fit(X_train, y_train)
+    #from sklearn.tree import export_graphviz
+    #export_graphviz(clf, "tree3.dot", ft.get_feature_names())
+    #tracer()
     #X_test_s = select.transform(X_test)
     probs = clf.predict_proba(X_test)
     pred = clf.predict(X_test)
+    probs_train = clf.predict_proba(X_train)
     print("auc: %f" % auc_score(y_test, probs[:, 1]))
+    print("auc train: %f" % auc_score(y_train, probs_train[:, 1]))
 
     fp = np.where(pred > y_test)[0]
     fn = np.where(pred < y_test)[0]
     fn_comments = comments_test[fn]
     fp_comments = comments_test[fp]
-    n_bad = X_test[:, -3].toarray().ravel()
+    n_bad = X_test[:, -2].toarray().ravel()
     fn_comments = np.vstack([fn, n_bad[fn], probs[fn][:, 1], fn_comments]).T
     fp_comments = np.vstack([fp, n_bad[fp], probs[fp][:, 1], fp_comments]).T
 
@@ -136,7 +143,7 @@ def analyze_output():
     #important = np.abs(clf.coef_.ravel()) > 0.001
     #coef_ = select.inverse_transform(clf.coef_)
     coef_ = clf.coef_
-    important = np.argsort(np.abs(coef_.ravel()))[-60:]
+    important = np.argsort(np.abs(coef_.ravel()))[-100:]
     feature_names = ft.get_feature_names()
     f_imp = feature_names[important]
     coef = coef_.ravel()[important]
@@ -149,16 +156,26 @@ def analyze_output():
     labels = ax.set_xticklabels(f_imp)
     for label in labels:
         label.set_rotation(90)
-    plt.savefig("ana.png")
+    plt.savefig("ana.png", bbox_inches="tight")
     plt.show()
 
-    tracer()
+    def about(comment_num):
+        print(comments_test[comment_num])
+        inds = np.where(X_test[comment_num].toarray())[1]
+        coef_com = coef_.ravel()[inds]
+        feat_entries = X_test[comment_num, inds].toarray().ravel()
+        sorting = np.argsort(coef_com * feat_entries)
+        blub = np.vstack([feature_names[inds][sorting], feat_entries[sorting],
+            coef_com[sorting]]).T
+        print(blub)
+
+    #tracer()
 
 
 def explore_features():
     comments, labels = load_extended_data()
     ft = TextFeatureTransformer()
-    features, flat_words_lower, filtered_words = \
+    features, flat_words_lower, filtered_words, comments_filtered = \
             ft._preprocess(comments)
     asdf = [" ".join(w) for w in filtered_words]
     np.savetxt("filtered.txt", asdf, fmt="%s")

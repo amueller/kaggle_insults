@@ -1,89 +1,10 @@
-CountVectorizer 
-LinearSVC L1 C=0.25 0.83
-LinearSVC L2 C=0.062 0.838
-
-TFIDF
-LinearSVC L1 C: 1.0 0.838
-LinearSVC L2 C: 1.0 0.84064462306075627,
-SVC  ({'C': 100.0, 'gamma': 1.0}, 0.83075610310461856
-
-
-char 2-gram + word 2-gram : 83.9 char 2-gram doesn't help?
-char 4-gram + word 2-gram : 0.84216553560828478
-with char 1-gram ? 0.84190434936067127
-char 6-gram 0.84444273315043883  {'penalty': 'l2', 'C': 0.125}
-
-
-word 2-gram + features 0.84722978935040338 {'penalty': 'l2', 'C': 2.0}
-
-features+ word 2-gram + char 6-gram 0.847486162584 {'penalty': 'l2', 'C': 0.125} 
-
-binary=true: 0.849511158172 {'penalty': 'l2', 'C': 0.25}
-
-corrected badword list 0.852294043093
-
-{'vect__char_max_n': 4, 'vect__word_max_n': 3, 'logr__C': 0.125, 'logr__penalty': 'l2'}
-0.851030145513
-{'vect__char_max_n': 4, 'vect__word_max_n': 1, 'logr__C': 0.03125, 'logr__penalty': 'l2', 'vect__char_min_n': 3}
-0.852803260015
-
-
-FROM NOW ON AUC!!!
-0.884426825818
-{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
-L1:
-0.883239800358
-{'vect__char_max_n': 4, 'logr__C': 0.25, 'vect__word_max_n': 1, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'}
-L1 no chars:
-0.881108382716
-{'vect__char_max_n': 4, 'logr__C': 0.5, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'
-
-L2 no chars:
-0.883419143416
-{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
-
-No chars?!
-0.884426825818
-{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
-
-L1, no chars, !, @
-0.883628749026
-{'vect__char_max_n': 4, 'logr__C': 0.5, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l1'}
-
-L2, no chars, !, @
-0.885277997947
-{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
-
-L2, nochars, fixed unicode
-0.887569120472
-{'vect__char_max_n': 4, 'logr__C': 1.0, 'vect__word_max_n': 2, 'vect__char_min_n': 3, 'logr__class_weight': 'auto', 'logr__penalty': 'l2'}
-test_prediction_12_14_41.csv
-
-L2 with chars
-{'vect__char_max_n': 4, 'logr__C': 0.0625, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
-
-L1 feature selection + RF
-0.89956105124940811
-clf = LogisticRegression(tol=1e-8, C=0.5, penalty='l1')
-{'max_features': 'log2', 'max_depth': 38, 'min_samples_leaf': 1}
-
-
 features:
- number of words,
- average word-length, 
-exlamation marks,
- all-caps,
-underscores,
  uncommon words?,
  quotes?
  one-letter variations,
- longest "word" aka tolololol,
 named entity,
-time?,
 any word twice?
-comparison to "bad word vocabulary"
 
-time doesn't help?
 
 
 ss50 0.899289015735
@@ -235,29 +156,3 @@ select percentile
 
 
 
-submission 3: (=1)
-test_prediction_12_12_30
-l2 with features + char
-{'vect__char_max_n': 4, 'logr__C': 0.125, 'vect__word_max_n': 3, 'vect__char_min_n': 3, 'logr__class_weight': None, 'logr__penalty': 'l2'}
-
-submission 4:
-big grid search:
-{'rf__max_depth': 35, 'l1select__C': 0.8, 'rf__max_features': 'log2', 'features__word_max_n': 1, 'features__char': False, 'rf__min_samples_leaf': 1}
-test_prediction_13_00_16.csv
-
-submission 5: (=2)
-???
-big grid search:
-
-Submission 3:
-no words
-test_prediction_01_20_56.csv
-0.901729056251
-{'logr__C': 7, 'vect__char_range': (1, 5)}
-
-
-Submission 4:
-test_prediction_02_21_35.csv
-no words, chi2 selection
-0.910878313902
-{'logr__C': 19, 'select__percentile': 7, 'vect__word_range': (1, 3), 'vect__char_range': (1, 5)}

@@ -10,20 +10,15 @@
 n_sentence long -> no insult!
 
 jellyfish features
-pca / kmenas features
+pca / kmeans features
 POS x word features
 stemmer
 
-"you are" feature / regexp
-collocations
 
-
-not replacing "_" and "." in training set: 1% difference!
 feature: ratio of punctuation characters!
 
 
 more regexp?
-html removal!
 
 5 final submissions:
 1) words, chars,  chi2 univariate selection
@@ -34,6 +29,7 @@ html removal!
 
 
 ====================================
-tokenizer: you are a !!!!!
+tokenizer: you are a !!!!!A
 
-you re the not found?!
+trees, naive bayes
+look at training set mistakes, regularization influence

@@ -9,6 +9,9 @@ import enchant
 
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import MinMaxScaler
+
+from util import load_subjectivity
 
 from IPython.core.debugger import Tracer
 
@@ -120,36 +123,50 @@ def make_collocation_analyzer(collocations, length=2):
 class TextFeatureTransformer(BaseEstimator):
     def __init__(self):
         self.d = enchant.Dict("en_US")
-        with open("my_badlist2.txt") as f:
+        with open("my_badlist3.txt") as f:
             badwords = [l.strip() for l in f.readlines()]
         self.badwords_ = badwords
+        self.subjectivity = load_subjectivity()
 
     def get_feature_names(self):
         feature_names = []
         feature_names.extend(self.unigram_vect.get_feature_names())
         feature_names.extend(self.bigram_vect_you.get_feature_names())
         feature_names.extend(self.trigram_vect_you.get_feature_names())
+        feature_names.extend(["you_are_" + w for w in
+            self.you_are_vect.get_feature_names()])
         #feature_names.extend(self.pos_vect.get_feature_names())
         feature_names.extend(["n_nicks", "n_urls", "n_sentences",
-            "n_non_words", "idiot", "moron", "n_html"])
+            "n_non_words", "idiot_regexp", "moron_regexp", "n_html"])
+        feature_names.extend(["strong_pos", "strong_neg", "weak_pos",
+            "weak_neg"])
         feature_names.extend(['n_words', 'n_chars', 'toolong', 'allcaps',
-            'max_len', 'mean_len', 'dots', '!', '?', 'spaces', 'bad_ratio',
+            'max_len', 'mean_len', 'bad_ratio',
             'n_bad', 'capsratio'])
         feature_names = [" ".join(w) if isinstance(w, tuple) else w
                             for w in feature_names]
         return np.array(feature_names)
 
     def fit(self, comments, y=None):
-        designed_features, flat_words_lower, filtered_words = \
+        self.fit_transform(comments, y)
+        return self
+
+    def fit_transform(self, comments, y=None):
+        designed, filtered_words_lower, filtered_words, comments_prep = \
                 self._preprocess(comments)
 
         empty_analyzer = lambda x: x
         self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3)
         print("vecorizing")
-        self.unigram_vect.fit(flat_words_lower)
+        unigrams = self.unigram_vect.fit_transform(filtered_words_lower)
 
         # pos tag vectorizer
         #self.pos_vect = TfidfVectorizer(analyzer=empty_analyzer).fit(tags)
+
+        # fancy vectorizer
+        self.you_are_vect = TfidfVectorizer(
+            token_pattern="(?i)you are (?:an?)?(?:the)? ?(\w+)")
+        you_are = self.you_are_vect.fit_transform(comments_prep)
 
         # get the google bad word list
         #with open("google_badlist.txt") as f:
@@ -157,11 +174,12 @@ class TextFeatureTransformer(BaseEstimator):
         self.trigram_measures = col.TrigramAssocMeasures()
 
         # extract bigram collocations including "you" (and your?)
-        #col.BigramCollocationFinder.from_words([w for c in flat_words_lower
+        #col.BigramCollocationFinder.from_words([w for c in
+        #filtered_words_lower
         #for w in c], window_size=4)
 
         col_you_bi = col.BigramCollocationFinder.from_documents(
-                flat_words_lower)
+                filtered_words_lower)
         col_you_bi.apply_freq_filter(3)
         col_you_bi._apply_filter(lambda x, y: np.all([w != "you" for w in x]))
         # < 400 of these
@@ -170,11 +188,11 @@ class TextFeatureTransformer(BaseEstimator):
         # make tfidfvectorizer that uses these bigrams
         self.bigram_vect_you = TfidfVectorizer(
                 analyzer=make_collocation_analyzer(self.you_bigrams), min_df=3)
-        self.bigram_vect_you.fit(flat_words_lower)
+        you_bigrams = self.bigram_vect_you.fit_transform(filtered_words_lower)
 
         # extract trigram collocations
         col_you_tri = col.TrigramCollocationFinder.from_documents(
-                flat_words_lower)
+                filtered_words_lower)
         col_you_tri.apply_freq_filter(3)
         col_you_tri._apply_filter(lambda x, y: np.all([w != "you" for w in x]))
         # < 400 of these, too
@@ -183,10 +201,25 @@ class TextFeatureTransformer(BaseEstimator):
         self.col_you_tri = col_you_tri
         self.trigram_vect_you = TfidfVectorizer(
             analyzer=make_collocation_analyzer(self.you_trigrams, 3), min_df=3)
-        self.trigram_vect_you.fit(flat_words_lower)
-        # make tfidfvectorizer that uses these bigrams
+        you_trigrams = self.trigram_vect_you.fit_transform(
+                            filtered_words_lower)
 
-        return self
+        ## some handcrafted features!
+        designed.extend(self._handcrafted(filtered_words, comments,
+            filtered_words_lower,))
+        designed = np.array(designed).T
+        self.scaler = MinMaxScaler()
+        designed = self.scaler.fit_transform(designed)
+        features = []
+        features.append(unigrams)
+        features.append(you_bigrams)
+        features.append(you_trigrams)
+        features.append(you_are)
+        #features.append(pos_unigrams)
+        features.append(sparse.csr_matrix(designed))
+        features = sparse.hstack(features)
+
+        return features.tocsr()
 
     def _preprocess(self, comments):
         # remove nicknames, urls, html
@@ -203,8 +236,19 @@ class TextFeatureTransformer(BaseEstimator):
         comments_nourl = [url.sub(' ', c) for c in comments_nonick]
         comments_ascii = [c.replace(u'\xa0', ' ') for c in comments_nourl]
         comments_ascii = [remove_non_ascii(c) for c in comments_ascii]
+        comments_ascii = [
+            c.replace("'ll", "will").replace("n't", "not")
+            .replace("'LL", "WILL").replace("N'T", "NOT")
+            for c in comments_ascii]
+        # replace /  with space, as this often separates words
+        comments_ascii = [c.replace(u'/', ' ') for c in comments_ascii]
+
         ur = "you are "
-        comments_ascii = [re.sub(ur"you'? ?a?re ", ur, c)
+        UR = "YOU ARE "
+        comments_ascii = [re.sub(ur"[Yy]ou'? ?a?re ", ur, c)
+                for c in comments_ascii]
+        # again for the loud people (don't want to lose that)
+        comments_ascii = [re.sub(ur"YOU'? ?A?RE ", UR, c)
                 for c in comments_ascii]
         idiot = [len(re.findall("you.? [\w ]* idi.t", c))
                 for c in comments_ascii]
@@ -216,19 +260,30 @@ class TextFeatureTransformer(BaseEstimator):
         # remove dots as they are annoying
         sentences = [[s.replace(".", " ") for s in sent] for sent in
                 sentences]
-        punctuation = \
-            ['...', '.', '?', '!', ',', "''", '``', '#', '$', "'", "%", "&"]
+        #punctuation = \
+            #['...', '.', '?', '!', ',', "''", '``', '#', '$', "'", "%", "&"]
         n_sentences = [len(sent) for sent in sentences]
         words = [[nltk.word_tokenize(s) for s in sent] for sent in sentences]
         #tagged = [[nltk.pos_tag(s) for s in comment] for comment in words]
         #tags = [[tag[1] for sent in comment for tag in sent]
                 #for comment in tagged]
-        # remove ' <- this thing
-        words = [[[w.strip("'") for w in s if w.strip("'")] for s in sent]
-                for sent in words]
-        filtered_words = [[w for sent in sents for w in sent
-           if not w in punctuation]
-           for sents in words]
+        flat_words = [[w for sent in sents for w in sent] for sents in words]
+        # remove "words" that contain no letter/numbers
+        filtered_words = [[w for w in c
+            if not re.findall(r"^[^\w]*$", w)] for c in flat_words]
+
+        # get rid of non-word characters sourrounding words
+        filtered_words = [[re.sub("^[^\w]*(\w+)[^\w]*$", r"\1", w) for w in c]
+                for c in filtered_words]
+        # laughter normalization ^^
+        filtered_words = [[re.sub("(?i)ha(ha)+", r"haha", w) for w in c]
+                for c in filtered_words]
+        filtered_words = [[re.sub("(?i)l+o+l+(o+l+)+", r"lol", w) for w in c]
+                for c in filtered_words]
+        # replace the famous "0" as o
+        filtered_words = [[re.sub("(?i)([a-z]+)0([a-z]+)", r"\1O\2", w)
+            for w in c] for c in filtered_words]
+
         # detect weird stuff so we can spellcheck
         non_words = [[a for a in s if not self.d.check(a)]
                       for s in filtered_words]
@@ -237,29 +292,22 @@ class TextFeatureTransformer(BaseEstimator):
         non_words = [[a for a in s if not a.lower() in self.badwords_]
                     for s in non_words]
         n_non_words = [len(w) for w in non_words]
-        flat_words_lower = [[w.lower() for w in comment]
+        filtered_words_lower = [[w.lower() for w in comment]
                 for comment in filtered_words]
         #flat = [a for s in non_words for a in s]
         #bla, blub = np.unique(flat, return_inverse=True)
-        # not words, only there once. we could try and guess?
+        #not words, only there once. we could try and guess?
         #to_replace = bla[np.bincount(blub) == 1].tolist()
+        #tracer()
         features = [n_nicks, n_urls, n_sentences, n_non_words, idiot, moron,
                 n_html]
-        return [features, flat_words_lower,
-                filtered_words]
+        return [features, filtered_words_lower,
+                filtered_words, comments_ascii]
 
-    def transform(self, comments):
-        designed, flat_words_lower, filtered_words = \
-                self._preprocess(comments)
-
-        # get started with real features:
-        unigrams = self.unigram_vect.transform(flat_words_lower)
-        you_bigrams = self.bigram_vect_you.transform(flat_words_lower)
-        you_trigrams = self.trigram_vect_you.transform(flat_words_lower)
-        #pos_unigrams = self.pos_vect.transform(tags)
-
+    def _handcrafted(self, filtered_words, comments, filtered_words_lower):
         ## some handcrafted features!
-        n_words = [len(c) for c in filtered_words]
+        n_words = np.array([len(c) for c in filtered_words], dtype=np.float)
+        n_words += 0.1
         n_chars = [len(c) for c in comments]
         too_long = np.array(n_chars) > 1000
         # number of uppercase words
@@ -269,35 +317,61 @@ class TextFeatureTransformer(BaseEstimator):
         # longest word
         # after removeing all the stuff above, the comment migh be empty
         max_word_len = [np.max([len(w) for w in c])
-                if len(c) else 0 for c in flat_words_lower]
+                if len(c) else 0 for c in filtered_words]
         # average word length
         mean_word_len = [np.mean([len(w) for w in c])
-                if len(c) else 0 for c in flat_words_lower]
+                if len(c) else 0 for c in filtered_words]
 
         # number of google badwords:
         # also take plurals
         n_bad = [np.sum([c.count(w) + c.count(w + "s")
                  for w in self.badwords_])
-                 if len(c) else 0 for c in flat_words_lower]
-        exclamation = [c.count("!") for c in comments]
-        question = [c.count("?") for c in comments]
-        spaces = [c.count(" ") for c in comments]
-        dots = [c.count("...") for c in comments]
+                 if len(c) else 0 for c in comments]
 
-        # avoid nans
-        allcaps_ratio = (np.array(allcaps)
-                / (np.array(n_words, dtype=np.float) + 0.1))
-        bad_ratio = np.array(n_bad) / (np.array(n_words, dtype=np.float) + 0.1)
+        allcaps_ratio = np.array(allcaps) / n_words
+        bad_ratio = np.array(n_bad) / n_words
 
-        designed.extend([n_words, n_chars,
-            allcaps, too_long, max_word_len, mean_word_len, dots, exclamation,
-            question, spaces, bad_ratio, n_bad, allcaps_ratio])
+        # subjectivity database
+        strong_pos = [np.sum([w in self.subjectivity[0] for w in c])
+                if len(c) else 0 for c in filtered_words_lower]
+        strong_pos = np.array(strong_pos) / n_words
+        strong_neg = [np.sum([w in self.subjectivity[1] for w in c])
+                if len(c) else 0 for c in filtered_words_lower]
+        strong_neg = np.array(strong_pos) / n_words
+        weak_pos = [np.sum([w in self.subjectivity[2] for w in c])
+                if len(c) else 0 for c in filtered_words_lower]
+        weak_pos = np.array(strong_pos) / n_words
+        weak_neg = [np.sum([w in self.subjectivity[3] for w in c])
+                if len(c) else 0 for c in filtered_words_lower]
+        weak_neg = np.array(strong_pos) / n_words
+
+        result = [strong_pos, strong_neg, weak_pos, weak_neg, n_words, n_chars,
+                allcaps, too_long, max_word_len, mean_word_len, bad_ratio,
+                n_bad, allcaps_ratio]
+        return result
+
+    def transform(self, comments):
+        designed, filtered_words_lower, filtered_words, comments_prep = \
+                self._preprocess(comments)
+
+        # get started with real features:
+        unigrams = self.unigram_vect.transform(filtered_words_lower)
+        you_bigrams = self.bigram_vect_you.transform(filtered_words_lower)
+        you_trigrams = self.trigram_vect_you.transform(filtered_words_lower)
+        #pos_unigrams = self.pos_vect.transform(tags)
+        you_are = self.you_are_vect.transform(comments_prep)
+
+        ## some handcrafted features!
+        designed.extend(self._handcrafted(filtered_words, comments,
+            filtered_words_lower))
         designed = np.array(designed).T
+        designed = self.scaler.transform(designed)
 
         features = []
         features.append(unigrams)
         features.append(you_bigrams)
         features.append(you_trigrams)
+        features.append(you_are)
         #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
         features = sparse.hstack(features)
