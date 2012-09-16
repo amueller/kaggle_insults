@@ -10,6 +10,7 @@ import enchant
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.cluster import KMeans
 
 from util import load_subjectivity
 
@@ -128,6 +129,7 @@ class TextFeatureTransformer(BaseEstimator):
         self.badwords_ = badwords
         self.subjectivity = load_subjectivity()
         self.max_df = max_df
+        self.stemmer = nltk.stem.PorterStemmer()
 
     def get_feature_names(self):
         feature_names = []
@@ -144,6 +146,7 @@ class TextFeatureTransformer(BaseEstimator):
         feature_names.extend(['n_words', 'n_chars', 'toolong', 'allcaps',
             'max_len', 'mean_len', 'bad_ratio',
             'n_bad', 'capsratio'])
+        #feature_names.extend(["kmeans_%02d" % i for i in xrange(20)])
         feature_names = [" ".join(w) if isinstance(w, tuple) else w
                             for w in feature_names]
         return np.array(feature_names)
@@ -219,7 +222,10 @@ class TextFeatureTransformer(BaseEstimator):
         features.append(you_are)
         #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
-        features = sparse.hstack(features)
+        features = sparse.hstack(features).tocsr()
+        self.km = KMeans(n_clusters=20)
+        #km_features = self.km.fit(features).transform(features)
+        #features = sparse.hstack([features, sparse.csr_matrix(km_features)])
 
         return features.tocsr()
 
@@ -329,9 +335,12 @@ class TextFeatureTransformer(BaseEstimator):
         #n_bad = [np.sum([c.lower().count(w) + c.lower().count(w + "s")
                  #for w in self.badwords_])
                  #if len(c) else 0 for c in comments]
-        n_bad = [np.sum([c.lower().count(w)
-                 for w in self.badwords_])
-                 if len(c) else 0 for c in comments]
+        #n_bad = [np.sum([c.lower().count(w)
+                 #for w in self.badwords_])
+                 #if len(c) else 0 for c in comments]
+
+        n_bad = [np.sum([self.stemmer.stem_word(w) in self.badwords_ for w in c])
+                 if len(c) else 0 for c in filtered_words_lower]
 
         allcaps_ratio = np.array(allcaps) / n_words
         bad_ratio = np.array(n_bad) / n_words
@@ -379,6 +388,8 @@ class TextFeatureTransformer(BaseEstimator):
         features.append(you_are)
         #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
-        features = sparse.hstack(features)
+        features = sparse.hstack(features).tocsr()
+        #km_features = self.km.transform(features)
+        #features = sparse.hstack([features, sparse.csr_matrix(km_features)])
 
         return features.tocsr()
