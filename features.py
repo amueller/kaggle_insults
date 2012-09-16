@@ -10,7 +10,6 @@ import enchant
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.cluster import KMeans
 
 from util import load_subjectivity
 
@@ -122,13 +121,12 @@ def make_collocation_analyzer(collocations, length=2):
 
 
 class TextFeatureTransformer(BaseEstimator):
-    def __init__(self, max_df=1.):
+    def __init__(self):
         self.d = enchant.Dict("en_US")
         with open("my_badlist.txt") as f:
             badwords = [l.strip() for l in f.readlines()]
         self.badwords_ = badwords
         self.subjectivity = load_subjectivity()
-        self.max_df = max_df
         self.stemmer = nltk.stem.PorterStemmer()
 
     def get_feature_names(self):
@@ -146,7 +144,6 @@ class TextFeatureTransformer(BaseEstimator):
         feature_names.extend(['n_words', 'n_chars', 'toolong', 'allcaps',
             'max_len', 'mean_len', 'bad_ratio',
             'n_bad', 'capsratio'])
-        #feature_names.extend(["kmeans_%02d" % i for i in xrange(20)])
         feature_names = [" ".join(w) if isinstance(w, tuple) else w
                             for w in feature_names]
         return np.array(feature_names)
@@ -160,8 +157,7 @@ class TextFeatureTransformer(BaseEstimator):
                 self._preprocess(comments)
 
         empty_analyzer = lambda x: x
-        self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3,
-                max_df=self.max_df)
+        self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3)
         print("vecorizing")
         unigrams = self.unigram_vect.fit_transform(filtered_words_lower)
 
@@ -223,11 +219,8 @@ class TextFeatureTransformer(BaseEstimator):
         #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
         features = sparse.hstack(features).tocsr()
-        self.km = KMeans(n_clusters=20)
-        #km_features = self.km.fit(features).transform(features)
-        #features = sparse.hstack([features, sparse.csr_matrix(km_features)])
 
-        return features.tocsr()
+        return features
 
     def _preprocess(self, comments):
         # remove nicknames, urls, html
@@ -292,6 +285,9 @@ class TextFeatureTransformer(BaseEstimator):
         filtered_words = [[re.sub("(?i)([a-z]+)0([a-z]+)", r"\1O\2", w)
             for w in c] for c in filtered_words]
 
+        filtered_words = [[self.stemmer.stem(w)
+            for w in c] for c in filtered_words]
+
         # detect weird stuff so we can spellcheck
         non_words = [[a for a in s if not self.d.check(a)]
                       for s in filtered_words]
@@ -339,7 +335,8 @@ class TextFeatureTransformer(BaseEstimator):
                  #for w in self.badwords_])
                  #if len(c) else 0 for c in comments]
 
-        n_bad = [np.sum([self.stemmer.stem_word(w) in self.badwords_ for w in c])
+        n_bad = [np.sum([self.stemmer.stem_word(w) in self.badwords_
+            for w in c])
                  if len(c) else 0 for c in filtered_words_lower]
 
         allcaps_ratio = np.array(allcaps) / n_words
@@ -389,7 +386,5 @@ class TextFeatureTransformer(BaseEstimator):
         #features.append(pos_unigrams)
         features.append(sparse.csr_matrix(designed))
         features = sparse.hstack(features).tocsr()
-        #km_features = self.km.transform(features)
-        #features = sparse.hstack([features, sparse.csr_matrix(km_features)])
 
-        return features.tocsr()
+        return features

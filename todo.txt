@@ -1,17 +1,5 @@
-#feature selection for words and chars separately - too high variance?
-#randomized l1 - takes long, could work 
-#rfe takes long, could word 
-#scaling of hand-crafted features - doesn't really make a difference
-
-# averaging multiple classifiers - no effect?
-
-# kernels! chi2, intersection, cosin - can't get SVC to work - normalization?
-
-n_sentence long -> no insult!
-
 jellyfish features
 pca / kmeans features
-POS x word features
 stemmer
 
 
@@ -31,3 +19,8 @@ more regexp?
 ====================================
 trees
 look at training set mistakes, regularization influence
+
+stemming!!
+kmeans!!
+cross-val chi320 selection for nltk_model!
+kfold vs shuffle split

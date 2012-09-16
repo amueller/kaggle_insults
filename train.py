@@ -10,8 +10,8 @@ from sklearn.metrics import auc_score
 import matplotlib.pyplot as plt
 
 from models import build_base_model
-#from models import build_elasticnet_model
-#from models import build_stacked_model
+from models import build_elasticnet_model
+from models import build_stacked_model
 from models import build_nltk_model
 #from sklearn.feature_selection import SelectPercentile, chi2
 
@@ -53,12 +53,12 @@ def eval_model():
     comments, labels = load_extended_data()
 
     clf1 = build_base_model()
-    #clf2 = build_elasticnet_model()
-    #clf3 = build_stacked_model()
-    #clf4 = build_nltk_model()
-    #models = [clf1, clf2, clf3, clf4]
-    models = [clf1]
-    cv = ShuffleSplit(len(comments), n_iterations=20, test_size=0.2,
+    clf2 = build_elasticnet_model()
+    clf3 = build_stacked_model()
+    clf4 = build_nltk_model()
+    models = [clf1, clf2, clf3, clf4]
+    #models = [clf1]
+    cv = ShuffleSplit(len(comments), n_iterations=5, test_size=0.2,
             indices=True)
     scores = []
     for train, test in cv:
@@ -135,7 +135,7 @@ def analyze_output():
     fn_train = np.where(pred_train < y_train)[0]
     fn_comments_train = comments_train[fn_train]
     fp_comments_train = comments_train[fp_train]
-    n_bad_train = X_train[:, -2].toarray().ravel()
+    n_bad_train = X_train[:, -22].toarray().ravel()
     fn_comments_train = np.vstack([fn_train, n_bad_train[fn_train],
         probs_train[fn_train][:, 1], fn_comments_train]).T
     fp_comments_train = np.vstack([fp_train, n_bad_train[fp_train],
@@ -192,7 +192,7 @@ def explore_features():
 
 
 if __name__ == "__main__":
-    grid_search()
-    #eval_model()
+    #grid_search()
+    eval_model()
     #analyze_output()
     #explore_features()
