@@ -121,12 +121,13 @@ def make_collocation_analyzer(collocations, length=2):
 
 
 class TextFeatureTransformer(BaseEstimator):
-    def __init__(self):
+    def __init__(self, max_df=1.):
         self.d = enchant.Dict("en_US")
         with open("my_badlist.txt") as f:
             badwords = [l.strip() for l in f.readlines()]
         self.badwords_ = badwords
         self.subjectivity = load_subjectivity()
+        self.max_df = max_df
 
     def get_feature_names(self):
         feature_names = []
@@ -156,7 +157,8 @@ class TextFeatureTransformer(BaseEstimator):
                 self._preprocess(comments)
 
         empty_analyzer = lambda x: x
-        self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3)
+        self.unigram_vect = TfidfVectorizer(analyzer=empty_analyzer, min_df=3,
+                max_df=self.max_df)
         print("vecorizing")
         unigrams = self.unigram_vect.fit_transform(filtered_words_lower)
 
