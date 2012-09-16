@@ -91,7 +91,7 @@ def grid_search():
 
     tracer()
     cv_scores = grid.scores_
-    for param in zip(cv_scores.params):
+    for param in cv_scores.params:
         means, errors = cv_scores.accumulated(param, 'max')
         plt.errorbar(cv_scores.values[param], means, yerr=errors)
         plt.set_xlabel(param)
