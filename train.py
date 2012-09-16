@@ -16,8 +16,7 @@ from models import build_nltk_model
 #from sklearn.feature_selection import SelectPercentile, chi2
 
 
-from util import load_data, load_extended_data, write_test, load_test, \
-        load_subjectivity
+from util import load_data, load_extended_data, write_test, load_test
 
 from IPython.core.debugger import Tracer
 
@@ -108,12 +107,12 @@ def grid_search():
 def analyze_output():
     comments, labels = load_data()
     y_train, y_test, comments_train, comments_test = \
-            train_test_split(labels, comments, random_state=0)
+            train_test_split(labels, comments, random_state=1)
     #from sklearn.tree import DecisionTreeClassifier
     #bad = BadWordCounter()
     #custom = bad.transform(comments_train)
 
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=.5)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=1.5)
     #clf = DecisionTreeClassifier(compute_importances=True,min_samples_leaf=10)
     ft = TextFeatureTransformer().fit(comments_train, y_train)
     X_train = ft.transform(comments_train)
@@ -127,9 +126,20 @@ def analyze_output():
     #X_test_s = select.transform(X_test)
     probs = clf.predict_proba(X_test)
     pred = clf.predict(X_test)
+    pred_train = clf.predict(X_train)
     probs_train = clf.predict_proba(X_train)
     print("auc: %f" % auc_score(y_test, probs[:, 1]))
     print("auc train: %f" % auc_score(y_train, probs_train[:, 1]))
+
+    fp_train = np.where(pred_train > y_train)[0]
+    fn_train = np.where(pred_train < y_train)[0]
+    fn_comments_train = comments_train[fn_train]
+    fp_comments_train = comments_train[fp_train]
+    n_bad_train = X_train[:, -2].toarray().ravel()
+    fn_comments_train = np.vstack([fn_train, n_bad_train[fn_train],
+        probs_train[fn_train][:, 1], fn_comments_train]).T
+    fp_comments_train = np.vstack([fp_train, n_bad_train[fp_train],
+        probs_train[fp_train][:, 1], fp_comments_train]).T
 
     fp = np.where(pred > y_test)[0]
     fn = np.where(pred < y_test)[0]
@@ -169,7 +179,7 @@ def analyze_output():
             coef_com[sorting]]).T
         print(blub)
 
-    #tracer()
+    tracer()
 
 
 def explore_features():
