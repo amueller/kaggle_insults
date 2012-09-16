@@ -29,7 +29,5 @@ more regexp?
 
 
 ====================================
-tokenizer: you are a !!!!!A
-
-trees, naive bayes
+trees
 look at training set mistakes, regularization influence

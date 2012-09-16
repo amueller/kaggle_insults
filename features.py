@@ -123,7 +123,7 @@ def make_collocation_analyzer(collocations, length=2):
 class TextFeatureTransformer(BaseEstimator):
     def __init__(self):
         self.d = enchant.Dict("en_US")
-        with open("my_badlist3.txt") as f:
+        with open("my_badlist.txt") as f:
             badwords = [l.strip() for l in f.readlines()]
         self.badwords_ = badwords
         self.subjectivity = load_subjectivity()
@@ -165,7 +165,7 @@ class TextFeatureTransformer(BaseEstimator):
 
         # fancy vectorizer
         self.you_are_vect = TfidfVectorizer(
-            token_pattern="(?i)you are (?:an?)?(?:the)? ?(\w+)")
+                token_pattern="(?i)you are(?: an?)?(?: the)?(?: as)? (\w+)")
         you_are = self.you_are_vect.fit_transform(comments_prep)
 
         # get the google bad word list
@@ -324,7 +324,10 @@ class TextFeatureTransformer(BaseEstimator):
 
         # number of google badwords:
         # also take plurals
-        n_bad = [np.sum([c.count(w) + c.count(w + "s")
+        #n_bad = [np.sum([c.lower().count(w) + c.lower().count(w + "s")
+                 #for w in self.badwords_])
+                 #if len(c) else 0 for c in comments]
+        n_bad = [np.sum([c.lower().count(w)
                  for w in self.badwords_])
                  if len(c) else 0 for c in comments]
 
