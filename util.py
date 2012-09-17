@@ -67,9 +67,8 @@ def load_test():
             dates.append(splitstring[0][:-1])
             comment = ",".join(splitstring[1:])
             comments.append(preprocess_comment(comment))
-    dates = np.array(dates)
     comments = np.array(comments)
-    return comments, dates
+    return comments
 
 
 def write_test(labels, fname=None):

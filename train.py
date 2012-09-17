@@ -49,6 +49,29 @@ class BaggingClassifier(BaseEstimator):
         return probs / self.n_estimators
 
 
+def apply_models():
+    comments, labels = load_data()
+    #comments_test, labels_test = load_data("test_with_solutions.csv")
+    comments_test = load_test()
+
+    clf1 = build_base_model()
+    clf2 = build_elasticnet_model()
+    clf3 = build_stacked_model()
+    clf4 = build_nltk_model()
+    models = [clf1, clf2, clf3, clf4]
+    probs_common = np.zeros((len(comments_test), 2))
+    for i, clf in enumerate(models):
+        clf.fit(comments, labels)
+        probs = clf.predict_proba(comments_test)
+        #print("score: %f" % auc_score(labels_test, probs[:, 1]))
+        probs_common += probs
+        write_test(probs[:, 1], "test_prediction_model_%d.csv" % i)
+    probs_common /= 4.
+    #score = auc_score(labels_test, probs_common[:, 1])
+    #print("combined score: %f" % score)
+    write_test(probs_common[:, 1], "test_prediction_combined.csv")
+
+
 def eval_model():
     comments, labels = load_extended_data()
 
@@ -94,8 +117,7 @@ def grid_search():
     for param in cv_scores.params:
         means, errors = cv_scores.accumulated(param, 'max')
         plt.errorbar(cv_scores.values[param], means, yerr=errors)
-        plt.set_xlabel(param)
-        plt.set_ylim(0.6, 0.95)
+        plt.xlabel(param)
         plt.ylim(0.85, 0.93)
         plt.savefig("grid_plot_%s.png" % param)
         plt.close()
