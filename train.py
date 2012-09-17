@@ -118,7 +118,7 @@ def grid_search():
         means, errors = cv_scores.accumulated(param, 'max')
         plt.errorbar(cv_scores.values[param], means, yerr=errors)
         plt.xlabel(param)
-        plt.ylim(0.85, 0.93)
+        plt.ylim((0.85, 0.93))
         plt.savefig("grid_plot_%s.png" % param)
         plt.close()
     comments_test, dates_test = load_test()
