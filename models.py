@@ -42,8 +42,8 @@ def build_elasticnet_model():
 
 
 def build_base_model():
-    select = SelectPercentile(score_func=chi2, percentile=26)
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=8)
+    select = SelectPercentile(score_func=chi2, percentile=18)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=7)
     countvect_char = TfidfVectorizer(ngram_range=(1, 5),
             analyzer="char", binary=False)
     badwords = BadWordCounter()
