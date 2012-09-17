@@ -215,6 +215,7 @@ def explore_features():
 
 if __name__ == "__main__":
     #grid_search()
-    eval_model()
+    #eval_model()
     #analyze_output()
     #explore_features()
+    apply_models()
