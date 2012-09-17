@@ -42,8 +42,8 @@ def build_elasticnet_model():
 
 
 def build_base_model():
-    select = SelectPercentile(score_func=chi2, percentile=7)
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=20)
+    select = SelectPercentile(score_func=chi2, percentile=26)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=8)
     countvect_char = TfidfVectorizer(ngram_range=(1, 5),
             analyzer="char", binary=False)
     badwords = BadWordCounter()
@@ -53,8 +53,8 @@ def build_base_model():
 
 
 def build_nltk_model():
-    select = SelectPercentile(score_func=chi2, percentile=16)
-    clf = LogisticRegression(tol=1e-8, penalty='l2', C=4)
+    select = SelectPercentile(score_func=chi2, percentile=36)
+    clf = LogisticRegression(tol=1e-8, penalty='l2', C=2)
     ft = TextFeatureTransformer()
     pipeline = Pipeline([('vect', ft), ('select', select), ('logr', clf)])
     return pipeline
