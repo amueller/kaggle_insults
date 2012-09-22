@@ -56,11 +56,11 @@ def load_extended_data():
     return comments, labels
 
 
-def load_test():
+def load_test(ds="test.csv"):
     print("loading test set")
     comments = []
     dates = []
-    with open("test.csv") as f:
+    with open(ds) as f:
         f.readline()
         for line in f:
             splitstring = line.split(',')
@@ -71,14 +71,15 @@ def load_test():
     return comments
 
 
-def write_test(labels, fname=None):
+def write_test(labels, fname=None, ds="test.csv"):
     if fname is None:
         fname = "test_prediction_september_%s.csv" % strftime("%d_%H_%M")
-    with open("test.csv") as f:
+    with open(ds) as f:
         with open(fname, 'w') as fw:
             f.readline()
-            fw.write("Insult,Date,Comment\n")
-            for label, line in zip(labels, f):
+            fw.write("id,Insult,Date,Comment\n")
+            for i, label, line in zip(np.arange(len(labels)), labels, f):
+                fw.write("%d," % (i + 1))
                 fw.write("%f," % label)
                 fw.write(line)
 

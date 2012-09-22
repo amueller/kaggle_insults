@@ -50,9 +50,8 @@ class BaggingClassifier(BaseEstimator):
 
 
 def apply_models():
-    comments, labels = load_data()
-    #comments_test, labels_test = load_data("test_with_solutions.csv")
-    comments_test = load_test()
+    comments, labels = load_extended_data()
+    comments_test = load_test("impermium_verification_set_.csv")
 
     clf1 = build_base_model()
     clf2 = build_elasticnet_model()
@@ -65,11 +64,13 @@ def apply_models():
         probs = clf.predict_proba(comments_test)
         #print("score: %f" % auc_score(labels_test, probs[:, 1]))
         probs_common += probs
-        write_test(probs[:, 1], "test_prediction_model_%d.csv" % i)
+        write_test(probs[:, 1], "test_prediction_model_%d.csv" % i,
+                ds="impermium_verification_set_.csv")
     probs_common /= 4.
     #score = auc_score(labels_test, probs_common[:, 1])
     #print("combined score: %f" % score)
-    write_test(probs_common[:, 1], "test_prediction_combined.csv")
+    write_test(probs_common[:, 1], "test_prediction_combined.csv",
+            ds="impermium_verification_set_.csv")
 
 
 def eval_model():
