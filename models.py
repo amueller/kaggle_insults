@@ -26,7 +26,7 @@ def build_elasticnet_model():
     select = SelectPercentile(score_func=chi2, percentile=16)
 
     clf = SGDClassifier(loss='log', penalty="elasticnet", shuffle=True,
-            alpha=0.0001, rho=0.95, n_iter=20)
+            alpha=0.0001, l1_ratio=0.95, n_iter=20)
     countvect_char = TfidfVectorizer(ngram_range=(1, 5),
             analyzer="char", binary=False)
     countvect_word = TfidfVectorizer(ngram_range=(1, 3),
