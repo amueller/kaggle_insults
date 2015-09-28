@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, clone
 from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from features import TextFeatureTransformer
-from sklearn.metrics import auc_score
+from sklearn.metrics import roc_auc_score as auc_score
 import matplotlib.pyplot as plt
 
 from models import build_base_model
